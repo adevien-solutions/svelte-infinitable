@@ -73,10 +73,9 @@ export const headers: TableHeader[] = [
 			defaultDirection: 'asc'
 		},
 		filter: {
-			type: 'multiSelect',
-			property: 'project_id',
-			options: [],
-			value: []
+			type: 'text',
+			property: ['project_name', 'project_id'],
+			placeholder: 'Filter by project name or ID'
 		},
 		style: {
 			minWidth: 250

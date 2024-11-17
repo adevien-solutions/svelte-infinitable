@@ -1,13 +1,18 @@
 <script lang="ts">
+	import ChevronDown from 'lucide-svelte/icons/chevron-down';
+	import ChevronUp from 'lucide-svelte/icons/chevron-up';
 	import { createEventDispatcher, getContext, onDestroy, onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { twMerge } from 'tailwind-merge';
+	import Button from '../components/ui/button/button.svelte';
+	import { buttonVariants } from '../components/ui/button/index.js';
 	import * as Popover from '../components/ui/popover/index.js';
 	import * as Tooltip from '../components/ui/tooltip/index.js';
+	import { cn } from '../utils.js';
 	import { type InfiniteTableContext, INFINITE_TABLE_CONTEXT_KEY } from './context.js';
 	import * as Filter from './filters/index.js';
-	import InfinitableFIlterIcon from './InfinitableFIlterIcon.svelte';
-	import type { FilterChangeEventDetail, SortDirection, TableHeader } from './types.js';
+	import InfinitableFilterIcon from './infinitable-filter-icon.svelte';
+	import type { FilterChangeEventParam, SortDirection, TableHeader } from './types.js';
 	import { debounce, isFilterHeader } from './utils.svelte.js';
 
 	export let header: TableHeader;
@@ -22,7 +27,7 @@
 		resetFlag,
 		element: { table }
 	} = getContext<InfiniteTableContext>(INFINITE_TABLE_CONTEXT_KEY);
-	const dispatch = createEventDispatcher<{ filter: Omit<FilterChangeEventDetail, 'isAllReset'> }>();
+	const dispatch = createEventDispatcher<{ filter: Omit<FilterChangeEventParam, 'isAllReset'> }>();
 	const filter = isFilterHeader(header)
 		? {
 				value: header.filter.value as any,
@@ -227,21 +232,15 @@
 	<div class="flex items-center justify-start gap-1.5">
 		{#if header.sort}
 			<Tooltip.Root>
-				<Tooltip.Trigger>
-					<button on:click|preventDefault={sort} type="button" class="font-semibold">
+				<Tooltip.Trigger asChild let:builder>
+					<Button on:click={sort} builders={[builder]} variant="link" class="h-7 p-0">
 						{header.label}
-					</button>
+					</Button>
 				</Tooltip.Trigger>
 				<Tooltip.Content>
-					<p>Sort by {header.label}</p>
+					<p>Sort by {header.label.toLowerCase()}</p>
 				</Tooltip.Content>
 			</Tooltip.Root>
-			<!-- <Tooltip activation="hover" static>
-				<button slot="toggle" on:click|preventDefault={sort} type="button" class="font-semibold">
-					{header.label}
-				</button>
-				Sort by {header.label}
-			</Tooltip> -->
 		{:else}
 			<span class="font-semibold">
 				{header.label}
@@ -249,10 +248,16 @@
 		{/if}
 		{#if isFilterHeader(header) && filter}
 			<Popover.Root>
-				<Popover.Trigger>
+				<Popover.Trigger asChild let:builder={popoverBuilder}>
 					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<InfinitableFIlterIcon showBadge={!filter.isDefault} />
+						<Tooltip.Trigger asChild let:builder={tooltipBuilder}>
+							<Button
+								builders={[popoverBuilder, tooltipBuilder]}
+								variant="link"
+								class="h-7 w-7 p-0"
+							>
+								<InfinitableFilterIcon showBadge={!filter.isDefault} />
+							</Button>
 						</Tooltip.Trigger>
 						<Tooltip.Content>
 							<p>Open filter</p>
@@ -260,11 +265,11 @@
 					</Tooltip.Root>
 				</Popover.Trigger>
 
-				<Popover.Content>
+				<Popover.Content class="p-0">
 					<div class="relative max-h-[min(500px,100vh)] overflow-y-auto">
 						<slot>
 							{#if header.filter.type === 'text'}
-								<Filter.Text bind:value={filter.value} />
+								<Filter.Text bind:value={filter.value} placeholder={header.filter.placeholder} />
 							{:else if header.filter.type === 'multiSelect'}
 								<Filter.MultiSelect bind:value={filter.value} options={header.filter.options} />
 							{/if}
@@ -272,62 +277,32 @@
 					</div>
 
 					<div class="flex items-center justify-between border-t p-1">
-						<Popover.Close disabled={filter.isDefault} on:click={reset} class="font-medium">
+						<Popover.Close
+							disabled={filter.isDefault}
+							on:click={reset}
+							class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
+						>
 							Reset
 						</Popover.Close>
-						<Popover.Close on:click={save} class="font-medium">Save</Popover.Close>
+						<Popover.Close
+							on:click={save}
+							class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
+						>
+							Save
+						</Popover.Close>
 					</div>
 				</Popover.Content>
 			</Popover.Root>
-
-			<!-- <Tooltip
-				placement="bottom-start"
-				offsetX={-12}
-				offsetY={4}
-				trapFocus
-				class="w-[min(100vw,300px)] overflow-hidden p-0"
-				toggleClass="flex items-center rounded px-1.5 duration-200 hover:bg-black/10 focus:bg-black/10"
-				wrapperClass="text-left"
-				on:close={() => (filter.value = header.filter.value)}
-			>
-				<Tooltip slot="toggle" activation="hover" static>
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<InfinitableFIlterIcon showBadge={!filter.isDefault} />
-						</Tooltip.Trigger>
-						<Tooltip.Content>
-							<p>Open filter</p>
-						</Tooltip.Content>
-					</Tooltip.Root>
-				</Tooltip>
-
-				<div class="relative max-h-[min(500px,100vh)] overflow-y-auto">
-					<slot>
-						{#if header.filter.type === 'text'}
-							<Filter.Text bind:value={filter.value} />
-						{:else if header.filter.type === 'multiSelect'}
-							<Filter.MultiSelect bind:value={filter.value} options={header.filter.options} />
-						{/if}
-					</slot>
-				</div>
-
-				<div class="flex items-center justify-between border-t p-1">
-					<PopoverButton as="span">
-						<InfinitableAction disabled={filter.isDefault} on:click={reset} class="font-medium">
-							Reset
-						</InfinitableAction>
-					</PopoverButton>
-					<PopoverButton as="span">
-						<InfinitableAction on:click={save} class="font-medium">Save</InfinitableAction>
-					</PopoverButton>
-				</div>
-			</Tooltip> -->
 		{/if}
 		{#if $sorting?.header === header}
 			{#if $sorting.direction === 'asc'}
-				<i in:fade|local={{ duration: 200 }} class="fa-solid fa-sort-up translate-y-1 pl-1" />
+				<span in:fade|local={{ duration: 200 }}>
+					<ChevronUp size={16} />
+				</span>
 			{:else if $sorting.direction === 'desc'}
-				<i in:fade|local={{ duration: 200 }} class="fa-solid fa-sort-down -translate-y-1 pl-1" />
+				<span in:fade|local={{ duration: 200 }}>
+					<ChevronDown size={16} />
+				</span>
 			{/if}
 		{/if}
 	</div>

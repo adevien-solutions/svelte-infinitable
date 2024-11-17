@@ -43,8 +43,8 @@
 			header
 				? ''
 				: selected
-					? 'bg-blue-50 focus-within:bg-blue-100/80 hover:bg-blue-100/80'
-					: 'focus-within:bg-gray-100 hover:bg-gray-100',
+					? 'bg-blue-50 hover:bg-blue-100/80 focus-visible:bg-blue-100/80'
+					: 'hover:bg-gray-100 focus-visible:bg-gray-100',
 			c
 		)}
 		{...$$restProps}
@@ -54,7 +54,7 @@
 				{#if disabled && disabledMessage}
 					<Tooltip.Root>
 						<Tooltip.Trigger>
-							<Checkbox checked={selected} disabled={true} class={header ? 'mb-1' : 'mb-0.5'} />
+							<Checkbox checked={selected} disabled={true} class={header ? 'mt-1' : 'mt-0.5'} />
 						</Tooltip.Trigger>
 						<Tooltip.Content>
 							<p>{disabledMessage}</p>
@@ -65,7 +65,7 @@
 						bind:checked={selected}
 						on:click={onChange}
 						{disabled}
-						class={header ? 'mb-1' : 'mb-0.5'}
+						class={header ? 'mt-1' : 'mt-0.5'}
 					/>
 				{/if}
 			</svelte:element>

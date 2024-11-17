@@ -27,7 +27,7 @@ export function isFilterHeader(header: TableHeader): header is TableFilterHeader
 
 export function searchSettingsToFilter(settings: TableSearchSettings | undefined, value: string) {
 	const searchTerm = value.trim();
-	if (!(settings && searchTerm)) {
+	if (!(settings && searchTerm) || settings.type === 'server') {
 		return;
 	}
 

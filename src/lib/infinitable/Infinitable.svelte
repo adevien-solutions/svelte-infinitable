@@ -1,25 +1,40 @@
 <script lang="ts">
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import Check from 'lucide-svelte/icons/check';
+	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+	import RotateCW from 'lucide-svelte/icons/rotate-cw';
+	import Search from 'lucide-svelte/icons/search';
+	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
+	import X from 'lucide-svelte/icons/x';
 	import { createEventDispatcher, onMount, setContext, tick } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { twMerge } from 'tailwind-merge';
 	import { Button } from '../components/ui/button/index.js';
 	import { INFINITE_TABLE_CONTEXT_KEY, type InfiniteTableContext } from './context.js';
-	import InfiniteTableAction from './InfinitableAction.svelte';
-	import InfiniteTableRow from './InfinitableRow.svelte';
-	import InfiniteTableSearch from './InfinitableSearch.svelte';
+	import InfiniteTableRow from './infinitable-row.svelte';
+	import InfiniteTableSearch from './infinitable-search.svelte';
 	import type {
-		FilterChangeEventDetail,
-		InfiniteEventDetail,
-		RefreshEventDetail,
-		SelectChangeEventDetail,
-		SortingChangeEventDetail,
+		FilterChangeEventParam,
+		InfiniteEventParam,
+		RefreshEventParam,
+		SearchEventParam,
+		SelectChangeEventParam,
+		SortingChangeEventParam,
 		TableFilterHeader,
 		TableItem,
 		TableSearchSettings
 	} from './types.js';
 	import { createTickingRelativeTime, searchSettingsToFilter } from './utils.svelte.js';
 
+	/**
+	 * The items to display in the table.
+	 *
+	 * If all of the items are loaded ahead of time,
+	 * set `ignoreInfinite` to `true` and call `finishInitialLoad()`
+	 * when the initial load is completed.
+	 *
+	 * @default []
+	 */
 	export let items: TableItem[] = [];
 	/** The height of each row in pixels. */
 	export let rowHeight: number;
@@ -44,31 +59,47 @@
 	/**
 	 * The number of rows to render above and below the visible area of the table.
 	 * Also controls how early the table will dispatch a "reached end" event.
+	 *
+	 * @default 10
 	 */
 	export let overscan = 10;
 	let c = '';
 	export { c as class };
 	/**
-	 * A function that takes an index and returns a boolean indicating whether the row
+	 * A function that takes an item and an index as parameters,
+	 * and returns a boolean indicating whether the row
 	 * at that index should be disabled or not.
+	 * @param item The item data.
 	 * @param index The index of the row.
+	 *
+	 * @default undefined
 	 */
 	export let rowDisabler: ((item: TableItem, index: number) => boolean) | undefined = undefined;
-	/** The text that will be displayed when the checkbox of a disabled row is hovered. */
+	/**
+	 * The text that will be displayed when the checkbox of a disabled row is hovered.
+	 *
+	 * @default undefined
+	 */
 	export let disabledRowMessage: string | undefined = undefined;
 	/**
 	 * Controls whether the `infinite` event is dispatched or not.
 	 * Useful to set to `true` if you know that you are going to load all the data at once.
+	 *
+	 * If set to `true`, call `finishInitialLoad()` when the initial load is completed.
+	 *
+	 * @default false
 	 */
 	export let ignoreInfinite = false;
 
 	const dispatch = createEventDispatcher<{
-		refresh: RefreshEventDetail;
+		refresh: RefreshEventParam;
+		search: SearchEventParam;
 		/** Dispatches the selected items. */
-		select: SelectChangeEventDetail;
+		select: SelectChangeEventParam;
 		/** Dispatched when the table has reached the end of the data. */
-		infinite: InfiniteEventDetail;
+		infinite: InfiniteEventParam;
 	}>();
+
 	const filterIsDefault = new Map<TableFilterHeader, boolean>();
 	const selected = new Set<TableItem>();
 	const allSelected = writable(false);
@@ -86,13 +117,15 @@
 
 	let internalItems: { data: TableItem; index: number }[] = [];
 	let viewport: HTMLElement;
+	let actionRow: HTMLElement;
 	let tableBody: HTMLTableSectionElement;
+	let filterable = false;
 	let allFiltersDefault = true;
 	let isAllSelectorChecked = false;
 	let rowCount = 0;
 	let selectedCount = 0;
 	let searchValue = '';
-	let sorting = writable<SortingChangeEventDetail | undefined>(undefined);
+	let sorting = writable<SortingChangeEventParam | undefined>(undefined);
 	let isMounted = false;
 	let errorMessage = '';
 	let state: 'idle' | 'loading' | 'completed' | 'error' = 'idle';
@@ -132,22 +165,29 @@
 		internalItems = items.map((data, index) => ({ data, index }));
 	}
 
-	function onSearchChange(e: CustomEvent<string>) {
-		searchValue = e.detail;
+	function onSearchChange(value: string) {
+		searchValue = value;
+		if (search?.type === 'server') {
+			state = 'loading';
+			search.onSearch({ value, ...refreshEventHandlers });
+			return;
+		}
 		applyFilteringAndOrdering();
 	}
 
 	function onFilterMount(filterHeader: TableFilterHeader) {
 		filterIsDefault.set(filterHeader, true);
+		filterable = filterIsDefault.size > 0;
 	}
 
 	function onFilterDestroy(filterHeader: TableFilterHeader) {
 		filterIsDefault.delete(filterHeader);
+		filterable = filterIsDefault.size > 0;
 		allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
 		applyFilteringAndOrdering();
 	}
 
-	function onFilterChange(detail: FilterChangeEventDetail) {
+	function onFilterChange(detail: FilterChangeEventParam) {
 		filterIsDefault.set(detail.header, detail.isDefault);
 		allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
 		if (!detail.isAllReset) {
@@ -155,7 +195,7 @@
 		}
 	}
 
-	function onSortChange(detail: SortingChangeEventDetail) {
+	function onSortChange(detail: SortingChangeEventParam) {
 		$sorting = detail;
 		sortItems();
 	}
@@ -400,7 +440,7 @@
 	// Functions passed to the "infinte" event //
 	/////////////////////////////////////////////
 
-	const infiniteEventHandlers: InfiniteEventDetail = {
+	const infiniteEventHandlers: InfiniteEventParam = {
 		loaded: (newItems: TableItem[]) => {
 			state = 'idle';
 			errorMessage = '';
@@ -417,7 +457,7 @@
 		}
 	};
 
-	const refreshEventHandlers: RefreshEventDetail = {
+	const refreshEventHandlers: RefreshEventParam = {
 		loaded: (i: TableItem[]) => {
 			state = 'idle';
 			errorMessage = '';
@@ -430,27 +470,63 @@
 		},
 		error: (message?: string) => {
 			state = 'error';
-			errorMessage = message ?? 'An error occurred while refreshing items';
+			errorMessage = message ?? 'An error occurred while loading items';
 		}
 	};
 </script>
 
+<div class="flex flex-wrap items-center justify-center gap-4">
+	<Button
+		size="sm"
+		on:click={() => {
+			state = 'loading';
+			items = [];
+		}}
+	>
+		Loading and empty
+	</Button>
+	<Button
+		size="sm"
+		on:click={() => {
+			state = 'completed';
+			items = [];
+		}}
+	>
+		Completed and empty
+	</Button>
+	<Button
+		size="sm"
+		on:click={() => {
+			state = 'error';
+
+			items = [];
+		}}
+	>
+		Errored and empty
+	</Button>
+	<Button
+		size="sm"
+		on:click={() => {
+			state = 'idle';
+			items = [];
+		}}
+	>
+		Idle and empty
+	</Button>
+</div>
 <div class={twMerge('flex flex-col text-sm', c)}>
 	<div
+		bind:this={actionRow}
 		class="flex flex-wrap items-center justify-start gap-4
 		rounded-t-md border !border-b-0 bg-gray-50 px-2 py-2"
 	>
 		{#if search}
 			<div class="grow">
-				<InfiniteTableSearch
-					bind:value={searchValue}
-					placeholder={search.placeholder}
-					on:search={onSearchChange}
-				/>
+				<InfiniteTableSearch bind:value={searchValue} settings={search} onSearch={onSearchChange} />
 			</div>
 		{/if}
-		<slot name="actionsStart" />
-		<div class="flex flex-wrap items-center justify-start gap-x-4 gap-y-1">
+		<div class="flex flex-wrap items-center justify-start gap-1">
+			<slot name="actionsStart" wrapper={actionRow} />
 			{#if refreshable}
 				<Tooltip.Root>
 					<Tooltip.Trigger asChild let:builder>
@@ -460,15 +536,9 @@
 							on:click={refresh}
 							disabled={state === 'loading'}
 						>
-							Refresh
+							<RotateCW size={16} class={state === 'loading' ? 'animate-spin' : ''} />
+							<span class="pl-2"> Refresh </span>
 						</Button>
-						<!-- <InfiniteTableAction
-							icon="fa-light fa-rotate {state === 'loading' ? 'animate-spin' : ''}"
-							on:click={refresh}
-							disabled={state === 'loading'}
-						>
-							Refresh
-						</InfiniteTableAction> -->
 					</Tooltip.Trigger>
 					<Tooltip.Content>
 						<p class="pt-0.5 text-xs text-gray-500">
@@ -477,16 +547,13 @@
 					</Tooltip.Content>
 				</Tooltip.Root>
 			{/if}
-			{#if filterIsDefault.size > 0 || search}
-				<InfiniteTableAction
-					icon="fa-light fa-xmark"
-					disabled={allFiltersDefault}
-					on:click={clearFilters}
-				>
-					Clear filters
-				</InfiniteTableAction>
+			{#if filterable}
+				<Button variant="ghost" on:click={clearFilters} disabled={allFiltersDefault}>
+					<X size={16} />
+					<span class="pl-2">Clear filters</span>
+				</Button>
 			{/if}
-			<slot name="actionsEnd" />
+			<slot name="actionsEnd" wrapper={actionRow} />
 		</div>
 	</div>
 	<div
@@ -524,22 +591,21 @@
 					{/if}
 					{#if position === internalItems.length - 1}
 						<tr>
-							<td colspan={viewport?.querySelectorAll('th').length || 1}>
+							<td colspan={viewport?.querySelectorAll('th')?.length || 1}>
 								{#if state === 'loading'}
 									<slot name="loader">
 										<div
-											class="flex h-12 items-center justify-center overflow-hidden
-										pb-2 text-gray-600"
+											class="flex h-12 items-center justify-center overflow-hidden pb-2 text-center text-gray-600"
 										>
-											Loading...
+											<LoaderCircle size={16} class="animate-spin" />
+											<span class="pl-2">Loading</span>
 										</div>
 									</slot>
 								{/if}
 								{#if state === 'completed'}
 									<slot name="completed">
 										<div
-											class="flex h-12 items-center justify-center overflow-hidden
-											pb-2 text-center text-gray-600"
+											class="flex h-12 items-center justify-center overflow-hidden pb-2 text-center text-gray-600"
 										>
 											No more items to load
 										</div>
@@ -559,8 +625,8 @@
 					justify-center gap-2 text-center text-gray-600"
 					style="height: calc(100% - {headerHeight}px);"
 				>
-					<i class="fa-light fa-magnifying-glass text-3xl" />
-					<p>No items found</p>
+					<Search size={32} />
+					<p class="text-center font-medium">No items found</p>
 				</div>
 			</slot>
 		{:else if items.length === 0}
@@ -571,28 +637,27 @@
 			>
 				{#if state === 'loading' || isInitialLoad}
 					<!-- Table is loading it's initial items -->
-					<slot name="initialLoader">
-						<p>Loading...</p>
+					<slot name="loadingEmpty">
+						<LoaderCircle size={32} class="animate-spin" />
+						<p class="text-center font-medium">Loading</p>
 					</slot>
 				{:else if state === 'completed'}
 					<!-- Table is completed and empty -->
 					<slot name="completedEmpty">
-						<i class="fa-solid fa-check text-3xl" />
-						<p>No items to display</p>
+						<Check size={32} />
+						<p class="text-center font-medium">No items to display</p>
 					</slot>
 				{:else if state === 'error'}
 					<!-- Table has an error and empty -->
 					<slot name="errorEmpty">
-						<i class="fa-solid fa-triangle-exclamation text-3xl" />
-						{#if errorMessage}
-							<p>{errorMessage}</p>
-						{/if}
+						<TriangleAlert size={32} />
+						<p class="text-center font-medium">{errorMessage || 'An unknown error occurred'}</p>
 					</slot>
 				{:else}
 					<!-- Table is idle and empty -->
 					<slot name="idleEmpty">
-						<i class="fa-light fa-magnifying-glass text-3xl" />
-						<p>No items to display</p>
+						<Search size={32} />
+						<p class="text-center font-medium">No items to display</p>
 					</slot>
 				{/if}
 			</div>

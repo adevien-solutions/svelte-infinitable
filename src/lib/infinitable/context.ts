@@ -1,7 +1,7 @@
 import type { Readable } from 'svelte/store';
 import type {
-	FilterChangeEventDetail,
-	SortingChangeEventDetail,
+	FilterChangeEventParam,
+	SortingChangeEventParam,
 	TableFilterHeader
 } from './types.js';
 
@@ -17,10 +17,10 @@ export type InfiniteTableContext = {
 	/** Controls whether the table rows are selectable or not. */
 	selectable: boolean;
 	allSelected: Readable<boolean>;
-	sorting: Readable<SortingChangeEventDetail | undefined>;
+	sorting: Readable<SortingChangeEventParam | undefined>;
 	onFilterMount: (filterHeader: TableFilterHeader) => void;
-	onFilterChange: (detail: FilterChangeEventDetail) => void;
+	onFilterChange: (detail: FilterChangeEventParam) => void;
 	onFilterDestroy: (filterHeader: TableFilterHeader) => void;
-	onSortChange: (detail: SortingChangeEventDetail) => void;
+	onSortChange: (detail: SortingChangeEventParam) => void;
 	resetFlag: Readable<boolean>;
 };
