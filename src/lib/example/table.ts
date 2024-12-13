@@ -55,7 +55,7 @@ export const statusOptions: { name: TaskState; label: string }[] = [
 	}
 ];
 
-export const headers: TableHeader[] = [
+export const tableHeaders: TableHeader[] = [
 	{
 		label: 'Task',
 		sort: {

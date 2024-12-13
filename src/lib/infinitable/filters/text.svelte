@@ -1,6 +1,11 @@
 <script lang="ts">
-	export let value = '';
-	export let placeholder = 'Enter text to filter by';
+	type Props = {
+		value?: string;
+		placeholder?: string;
+		[key: string]: any;
+	};
+
+	let { value = $bindable(''), placeholder = 'Enter text to filter by', ...rest }: Props = $props();
 </script>
 
 <div class="p-2">
@@ -11,6 +16,6 @@
 		placeholder:text-gray-500 hover:border-gray-500 focus-visible:border-gray-500 focus-visible:ring-1
 		focus-visible:ring-blue-400"
 		{placeholder}
-		{...$$restProps}
+		{...rest}
 	/>
 </div>

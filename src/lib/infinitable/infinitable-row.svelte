@@ -1,37 +1,54 @@
 <script lang="ts">
-	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { twMerge } from 'tailwind-merge';
 	import Checkbox from '../components/ui/checkbox/checkbox.svelte';
 	import * as Tooltip from '../components/ui/tooltip/index.js';
-	import { INFINITE_TABLE_CONTEXT_KEY, type InfiniteTableContext } from './context.js';
+	import { getInfiniteTableContext } from './context.js';
 
-	export let header = false;
-	export let selected = false;
+	type Props = {
+		header?: boolean;
+		selected?: boolean;
+		class?: string;
+		disabled?: boolean;
+		/** Controls whether the HTML of the component is rendered or not. */
+		hidden?: boolean;
+		disabledMessage?: string;
+		onChange?: (selected: boolean) => void;
+		children?: () => any;
+		[key: string]: any;
+	};
+
+	let {
+		header = false,
+		selected = false,
+		class: c = '',
+		disabled = false,
+		hidden = false,
+		disabledMessage = 'This row cannot be selected',
+		onChange = () => {},
+		children,
+		...rest
+	}: Props = $props();
 	const initial = selected;
-	export let disabled = false;
-	/** Controls whether the HTML of the component is rendered or not. */
-	export let hidden = false;
-	export let disabledMessage: string | undefined = 'This row cannot be selected';
-	let c = '';
-	export { c as class };
-	const { selectable, allSelected } = getContext<InfiniteTableContext>(INFINITE_TABLE_CONTEXT_KEY);
-	const dispatch = createEventDispatcher<{ change: boolean }>();
+	const { selectable, allSelected } = getInfiniteTableContext();
 
-	$: if (!header && !hidden) {
-		selected = $allSelected;
-	}
-
-	async function onChange() {
-		if (disabled) {
-			return;
+	$effect(() => {
+		if (!header && !hidden) {
+			selected = $allSelected;
 		}
-		await tick();
-		dispatch('change', selected);
-	}
+	});
 
 	onMount(() => {
 		selected = initial;
 	});
+
+	async function onClick() {
+		if (disabled) {
+			return;
+		}
+		await tick();
+		onChange(selected);
+	}
 </script>
 
 {#if !hidden}
@@ -47,7 +64,7 @@
 					: 'hover:bg-gray-100 focus-visible:bg-gray-100',
 			c
 		)}
-		{...$$restProps}
+		{...rest}
 	>
 		{#if selectable}
 			<svelte:element this={header ? 'th' : 'td'} class="w-[25px]">
@@ -63,13 +80,13 @@
 				{:else}
 					<Checkbox
 						bind:checked={selected}
-						on:click={onChange}
+						on:click={onClick}
 						{disabled}
 						class={header ? 'mt-1' : 'mt-0.5'}
 					/>
 				{/if}
 			</svelte:element>
 		{/if}
-		<slot />
+		{@render children?.()}
 	</tr>
 {/if}

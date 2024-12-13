@@ -5,13 +5,20 @@
 	import { Label } from '../../components/ui/label/index.js';
 	import type { FilterOption } from '../types.js';
 
-	export let value: FilterOption[];
-	export let options: FilterOption[];
-	let internalOption = options.map((option) => ({
-		value: option,
-		checked: value.includes(option)
-	}));
-	let allChecked = internalOption.every((option) => option.checked);
+	type Props = {
+		value: FilterOption[];
+		options: FilterOption[];
+	};
+
+	let { value = $bindable([]), options = [] }: Props = $props();
+	let internalOption = $state(
+		options.map((option) => ({
+			value: option,
+			checked: value.includes(option)
+		}))
+	);
+	// svelte-ignore state_referenced_locally
+	let allChecked = $state(internalOption.every((option) => option.checked));
 
 	function setValue() {
 		value = internalOption.reduce(

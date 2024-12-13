@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
-	import { createEventDispatcher, getContext, onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { twMerge } from 'tailwind-merge';
 	import Button from '../components/ui/button/button.svelte';
@@ -9,15 +9,20 @@
 	import * as Popover from '../components/ui/popover/index.js';
 	import * as Tooltip from '../components/ui/tooltip/index.js';
 	import { cn } from '../utils.js';
-	import { type InfiniteTableContext, INFINITE_TABLE_CONTEXT_KEY } from './context.js';
+	import { getInfiniteTableContext } from './context.js';
 	import * as Filter from './filters/index.js';
 	import InfinitableFilterIcon from './infinitable-filter-icon.svelte';
 	import type { FilterChangeEventParam, SortDirection, TableHeader } from './types.js';
 	import { debounce, isFilterHeader } from './utils.svelte.js';
 
-	export let header: TableHeader;
-	let c = '';
-	export { c as class };
+	type Props = {
+		header: TableHeader;
+		class?: string;
+		onFilter?: (details: Omit<FilterChangeEventParam, 'isAllReset'>) => void;
+		[key: string]: any;
+	};
+
+	let { header, class: c = '', onFilter = () => {}, children, ...rest }: Props = $props();
 	const {
 		sorting,
 		onFilterMount,
@@ -26,8 +31,7 @@
 		onSortChange,
 		resetFlag,
 		element: { table }
-	} = getContext<InfiniteTableContext>(INFINITE_TABLE_CONTEXT_KEY);
-	const dispatch = createEventDispatcher<{ filter: Omit<FilterChangeEventParam, 'isAllReset'> }>();
+	} = getInfiniteTableContext();
 	const filter = isFilterHeader(header)
 		? {
 				value: header.filter.value as any,
@@ -35,28 +39,32 @@
 				isDefault: true
 			}
 		: undefined;
+	let width: string | number = $state('auto');
+	let elementWidth: number = $state(0);
 	let lastResetFlag = $resetFlag;
 	let sortDirection: SortDirection | undefined = undefined;
-	let width: string | number;
-	let elementWidth: number;
 
-	$: {
+	$effect(() => {
 		elementWidth;
 		onResize();
-	}
+	});
 
-	$: if (lastResetFlag !== $resetFlag) {
-		lastResetFlag = $resetFlag;
-		if (isFilterHeader(header) && filter) {
-			header.filter.value = filter.defaultValue;
-			filter.isDefault = true;
+	$effect(() => {
+		if (lastResetFlag !== $resetFlag) {
+			lastResetFlag = $resetFlag;
+			if (isFilterHeader(header) && filter) {
+				header.filter.value = filter.value = filter.defaultValue;
+				filter.isDefault = true;
+			}
+			updateFilter(true);
 		}
-		onFilter(true);
-	}
+	});
 
-	$: if ($sorting?.header !== header && sortDirection) {
-		sortDirection = undefined;
-	}
+	$effect(() => {
+		if ($sorting?.header !== header && sortDirection) {
+			sortDirection = undefined;
+		}
+	});
 
 	onMount(() => {
 		if (isFilterHeader(header)) {
@@ -75,7 +83,7 @@
 			filter.value = header.filter.value = filter.defaultValue;
 		}
 		updateIsDefaultFilter();
-		onFilter();
+		updateFilter();
 	}
 
 	function save(): void {
@@ -83,7 +91,7 @@
 			header.filter.value = filter.value;
 		}
 		updateIsDefaultFilter();
-		onFilter();
+		updateFilter();
 	}
 
 	function updateIsDefaultFilter(): void {
@@ -104,13 +112,13 @@
 		}
 	}
 
-	function onFilter(isAllReset = false): void {
+	function updateFilter(isAllReset = false): void {
 		if (!(isFilterHeader(header) && filter)) {
 			return;
 		}
 
 		const detail = { header, isDefault: filter.isDefault };
-		dispatch('filter', detail);
+		onFilter(detail);
 		onFilterChange({ ...detail, isAllReset });
 	}
 
@@ -223,11 +231,11 @@
 
 <th
 	bind:clientWidth={elementWidth}
-	on:keydown={handleKeyDown}
+	onkeydown={handleKeyDown}
 	class={twMerge('text-left font-semibold', c)}
 	style="width: {width};"
-	{...$$restProps}
 	data-infinitable-header-label={header.label}
+	{...rest}
 >
 	<div class="flex items-center justify-start gap-1.5">
 		{#if header.sort}
@@ -267,13 +275,13 @@
 
 				<Popover.Content class="p-0">
 					<div class="relative max-h-[min(500px,100vh)] overflow-y-auto">
-						<slot>
-							{#if header.filter.type === 'text'}
-								<Filter.Text bind:value={filter.value} placeholder={header.filter.placeholder} />
-							{:else if header.filter.type === 'multiSelect'}
-								<Filter.MultiSelect bind:value={filter.value} options={header.filter.options} />
-							{/if}
-						</slot>
+						{#if children}
+							{@render children()}
+						{:else if header.filter.type === 'text'}
+							<Filter.Text bind:value={filter.value} placeholder={header.filter.placeholder} />
+						{:else if header.filter.type === 'multiSelect'}
+							<Filter.MultiSelect bind:value={filter.value} options={header.filter.options} />
+						{/if}
 					</div>
 
 					<div class="flex items-center justify-between border-t p-1">

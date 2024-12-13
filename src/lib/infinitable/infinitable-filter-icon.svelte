@@ -2,7 +2,12 @@
 	import ListFilter from 'lucide-svelte/icons/list-filter';
 	import { fade } from 'svelte/transition';
 
-	let { showBadge, class: c } = $props<{ showBadge: boolean }>();
+	type Props = {
+		showBadge?: boolean;
+		class?: string;
+	};
+
+	let { showBadge = false, class: c = '' }: Props = $props();
 </script>
 
 <span class="relative {c}">

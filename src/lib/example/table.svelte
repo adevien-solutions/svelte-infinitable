@@ -4,8 +4,8 @@
 	import {
 		formatDateString,
 		getTasks,
-		headers,
 		isFinishedTaskState,
+		tableHeaders,
 		taskStateData,
 		type TaskData
 	} from '$lib/example/index.js';
@@ -16,7 +16,7 @@
 	import Trash from 'lucide-svelte/icons/trash';
 
 	let table: Infinitable.Root;
-	let items: TaskData[];
+	let items: TaskData[] = [];
 	let selectedTasks: TaskData[] = [];
 	let cancelDisabled = true;
 	let page = 1;
@@ -29,9 +29,7 @@
 		return { data, depleted };
 	}
 
-	async function infiniteHandler({
-		detail: { loaded, completed, error }
-	}: Infinitable.InfiniteEvent) {
+	async function onInfinite({ loaded, completed, error }: Infinitable.InfiniteEventParam) {
 		try {
 			const { data, depleted } = await loadItems();
 			depleted ? completed(data) : loaded(data);
@@ -40,9 +38,7 @@
 		}
 	}
 
-	async function refreshHandler({
-		detail: { loaded, completed, error }
-	}: Infinitable.RefreshEvent) {
+	async function onRefresh({ loaded, completed, error }: Infinitable.RefreshEventParam) {
 		try {
 			page = 1;
 			const { data, depleted } = await loadItems();
@@ -52,7 +48,7 @@
 		}
 	}
 
-	async function searchHandler({ value, loaded, completed, error }: Infinitable.SearchEventParam) {
+	async function onSearch({ value, loaded, completed, error }: Infinitable.SearchEventParam) {
 		try {
 			page = 1;
 			const { data, depleted } = await loadItems(value);
@@ -62,8 +58,8 @@
 		}
 	}
 
-	function onSelect({ detail }: Infinitable.SelectChangeEvent) {
-		selectedTasks = detail.map((item) => item as TaskData);
+	function onSelect(items: Infinitable.SelectChangeEventParam) {
+		selectedTasks = items.map((item) => item as TaskData);
 		// Array.every returns true if the array is empty
 		cancelDisabled = selectedTasks.every(({ state }) => isFinishedTaskState(state));
 	}
@@ -73,78 +69,82 @@
 	bind:this={table}
 	bind:items
 	rowHeight={36}
-	search={{ type: 'server', onSearch: searchHandler, placeholder: 'Search tasks' }}
 	refreshable
 	selectable
+	search={{ type: 'server', onSearch, placeholder: 'Search tasks' }}
+	{onSelect}
+	{onInfinite}
+	{onRefresh}
 	class="h-[60vh] min-h-[400px]"
-	let:index
-	on:select={onSelect}
-	on:infinite={infiniteHandler}
-	on:refresh={refreshHandler}
 >
-	<svelte:fragment slot="actionsStart" let:wrapper>
+	{#snippet actionsStart()}
 		<Button variant="ghost" on:click={() => alert('Mock action')} disabled={cancelDisabled}>
 			<Trash size={16} />
 			<span class="pl-2"> Cancel tasks </span>
 		</Button>
-	</svelte:fragment>
+	{/snippet}
 
-	<svelte:fragment slot="headers">
-		{#each headers as header}
+	{#snippet headers()}
+		{#each tableHeaders as header}
 			<Infinitable.Header {header} />
 		{/each}
-	</svelte:fragment>
+	{/snippet}
 
-	{@const { id, name, project_name, state, created_at } = items[index]}
-	{@const label = name || id}
-	<td>
-		{label}
-	</td>
-	<td>
-		{project_name}
-	</td>
-	<td class="whitespace-nowrap !py-2">
-		<span>
-			<span
-				class="inline-block h-2.5 w-2.5 rounded-full {taskStateData[state]?.color ?? 'bg-gray-500'}"
-			></span>
-			<span class="pl-0.5">{taskStateData[state]?.label ?? 'Unkown'}</span>
-		</span>
-	</td>
-	<td class="whitespace-nowrap !py-2">
-		{formatDateString(created_at)}
-	</td>
-	<td class="!p-0 text-center">
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger
-				class={buttonVariants({
-					variant: 'ghost',
-					size: 'sm',
-					class: 'h-8 w-8 p-0 hover:bg-black/5'
-				})}
-			>
-				<span class="sr-only"> Row menu </span>
-				<EllipsisVertical size={18} />
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="end">
-				<DropdownMenu.Item on:click={() => alert('Mock action')}>
-					<Info size={16} />
-					<span class="pl-2">Details</span>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item on:click={() => alert('Mock action')}>
-					<Trash size={16} />
-					<span class="pl-2">Cancel task</span>
-				</DropdownMenu.Item>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
-	</td>
+	{#snippet children({ index })}
+		{@const { id, name, project_name, state, created_at } = items[index]}
+		{@const label = name || id}
+		<td>
+			{label}
+		</td>
+		<td>
+			{project_name}
+		</td>
+		<td class="whitespace-nowrap !py-2">
+			<span>
+				<span
+					class="inline-block h-2.5 w-2.5 rounded-full
+					{taskStateData[state]?.color ?? 'bg-gray-500'}"
+				></span>
+				<span class="pl-0.5">{taskStateData[state]?.label ?? 'Unkown'}</span>
+			</span>
+		</td>
+		<td class="whitespace-nowrap !py-2">
+			{formatDateString(created_at)}
+		</td>
+		<td class="!p-0 text-center">
+			<DropdownMenu.Root>
+				<DropdownMenu.Trigger
+					class={buttonVariants({
+						variant: 'ghost',
+						size: 'sm',
+						class: 'h-8 w-8 p-0 hover:bg-black/5'
+					})}
+				>
+					<span class="sr-only"> Row menu </span>
+					<EllipsisVertical size={18} />
+				</DropdownMenu.Trigger>
+				<DropdownMenu.Content align="end">
+					<DropdownMenu.Item on:click={() => alert('Mock action')}>
+						<Info size={16} />
+						<span class="pl-2">Details</span>
+					</DropdownMenu.Item>
+					<DropdownMenu.Item on:click={() => alert('Mock action')}>
+						<Trash size={16} />
+						<span class="pl-2">Cancel task</span>
+					</DropdownMenu.Item>
+				</DropdownMenu.Content>
+			</DropdownMenu.Root>
+		</td>
+	{/snippet}
 
-	<svelte:fragment slot="completedEmpty">
+	{#snippet completedEmpty()}
 		<ClipboardList size={32} />
 		<p class="text-center font-medium">No tasks found</p>
-	</svelte:fragment>
+	{/snippet}
 
-	<p slot="rowsDetail" let:rowCount let:selectedCount class="my-1 text-sm text-gray-500">
-		{rowCount} of {totalCount} task{rowCount === 1 ? '' : 's'} shown, {selectedCount} selected
-	</p>
+	{#snippet rowsDetail({ rowCount, selectedCount })}
+		<p class="my-1 text-sm text-gray-500">
+			{rowCount} of {totalCount} task{rowCount === 1 ? '' : 's'} shown, {selectedCount} selected
+		</p>
+	{/snippet}
 </Infinitable.Root>

@@ -124,8 +124,8 @@ export type FilterChangeEventParam = {
 	isDefault: boolean;
 	isAllReset: boolean;
 };
-export type FilterChangeEvent = CustomEvent<FilterChangeEventParam>;
-export type FiltersChangeEvent = CustomEvent<FilterChangeEventParam[]>;
+// export type FilterChangeEvent = CustomEvent<FilterChangeEventParam>;
+// export type FiltersChangeEvent = CustomEvent<FilterChangeEventParam[]>;
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -153,12 +153,12 @@ export type SortingChangeEventParam = {
 	property: TableHeaderSort['property'];
 	direction: SortDirection;
 };
-export type SortingChangeEvent = CustomEvent<SortingChangeEventParam>;
+// export type SortingChangeEvent = CustomEvent<SortingChangeEventParam>;
 
 export type SearchEventParam = {
 	value: string;
 } & RefreshEventParam;
-export type SearchEvent = CustomEvent<SearchEventParam>;
+// export type SearchEvent = CustomEvent<SearchEventParam>;
 
 export type InfiniteEventParam = {
 	loaded: (newItems: TableItem[]) => void;
@@ -166,7 +166,7 @@ export type InfiniteEventParam = {
 	error: (message?: string) => void;
 };
 
-export type InfiniteEvent = CustomEvent<InfiniteEventParam>;
+// export type InfiniteEvent = CustomEvent<InfiniteEventParam>;
 
 export type RefreshEventParam = {
 	loaded: (items: TableItem[]) => void;
@@ -174,10 +174,10 @@ export type RefreshEventParam = {
 	error: (message?: string) => void;
 };
 
-export type RefreshEvent = CustomEvent<RefreshEventParam>;
+// export type RefreshEvent = CustomEvent<RefreshEventParam>;
 
 export type SelectChangeEventParam = TableItem[];
-export type SelectChangeEvent = CustomEvent<SelectChangeEventParam>;
+// export type SelectChangeEvent = CustomEvent<SelectChangeEventParam>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type TableItem = Record<string | number | symbol, any>;

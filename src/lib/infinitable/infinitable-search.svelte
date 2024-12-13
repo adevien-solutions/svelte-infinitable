@@ -3,21 +3,19 @@
 	import type { TableSearchSettings } from './types.js';
 	import { debounce } from './utils.svelte.js';
 
-	let {
-		value = $bindable(''),
-		onSearch,
-		settings
-	}: {
+	type Props = {
 		value: string;
-		onSearch: (search: string) => void;
-		settings: TableSearchSettings;
-	} = $props();
+		onSearch?: (search: string) => void;
+		settings?: TableSearchSettings;
+	};
 
-	let placeholder = settings.placeholder ?? 'Search';
-	let debounceDelay = settings.debounceDelay ?? 500;
+	let { value = $bindable(''), onSearch, settings }: Props = $props();
+
+	let placeholder = settings?.placeholder ?? 'Search';
+	let debounceDelay = settings?.debounceDelay ?? 500;
 
 	const onSearchChange = debounce(() => {
-		onSearch(value.trim());
+		onSearch?.(value.trim());
 	}, debounceDelay);
 </script>
 
