@@ -63,17 +63,17 @@
 		class="sticky left-0 top-0 mb-2 flex w-full items-center justify-between border-b bg-white p-2"
 	>
 		<Label class="flex items-center">
-			<Checkbox checked={allChecked} on:click={toggleAll} />
+			<Checkbox checked={allChecked} onclick={toggleAll} />
 			<span class="pl-2 font-normal">Select all</span>
 		</Label>
-		<Button variant="ghost" size="sm" on:click={invert} class="ml-2 h-7 px-2">
+		<Button variant="ghost" size="sm" onclick={invert} class="ml-2 h-7 px-2">
 			Invert selection
 		</Button>
 	</div>
 	<div class="space-y-2 px-2">
 		{#each internalOption ?? [] as option}
 			<Label class="flex items-center">
-				<Checkbox bind:checked={option.checked} on:click={onChange} />
+				<Checkbox bind:checked={option.checked} onclick={onChange} />
 				<span class="pl-2 font-normal">{option.value.label}</span>
 			</Label>
 		{/each}

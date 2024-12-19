@@ -69,18 +69,20 @@
 		{#if selectable}
 			<svelte:element this={header ? 'th' : 'td'} class="w-[25px]">
 				{#if disabled && disabledMessage}
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<Checkbox checked={selected} disabled={true} class={header ? 'mt-1' : 'mt-0.5'} />
-						</Tooltip.Trigger>
-						<Tooltip.Content>
-							<p>{disabledMessage}</p>
-						</Tooltip.Content>
-					</Tooltip.Root>
+					<Tooltip.Provider delayDuration={200}>
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								<Checkbox checked={selected} disabled={true} class={header ? 'mt-1' : 'mt-0.5'} />
+							</Tooltip.Trigger>
+							<Tooltip.Content class="font-normal">
+								<p>{disabledMessage}</p>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</Tooltip.Provider>
 				{:else}
 					<Checkbox
 						bind:checked={selected}
-						on:click={onClick}
+						onclick={onClick}
 						{disabled}
 						class={header ? 'mt-1' : 'mt-0.5'}
 					/>

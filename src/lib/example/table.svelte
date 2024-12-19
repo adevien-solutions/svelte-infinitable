@@ -78,9 +78,9 @@
 	class="h-[60vh] min-h-[400px]"
 >
 	{#snippet actionsStart()}
-		<Button variant="ghost" on:click={() => alert('Mock action')} disabled={cancelDisabled}>
+		<Button variant="ghost" onclick={() => alert('Mock action')} disabled={cancelDisabled}>
 			<Trash size={16} />
-			<span class="pl-2"> Cancel tasks </span>
+			<span> Cancel tasks </span>
 		</Button>
 	{/snippet}
 
@@ -91,7 +91,7 @@
 	{/snippet}
 
 	{#snippet children({ index })}
-		{@const { id, name, project_name, state, created_at } = items[index]}
+		{@const { id, name, project_name, state, created_at } = items[index] ?? {}}
 		{@const label = name || id}
 		<td>
 			{label}
@@ -124,11 +124,11 @@
 					<EllipsisVertical size={18} />
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content align="end">
-					<DropdownMenu.Item on:click={() => alert('Mock action')}>
+					<DropdownMenu.Item onclick={() => alert('Mock action')}>
 						<Info size={16} />
 						<span class="pl-2">Details</span>
 					</DropdownMenu.Item>
-					<DropdownMenu.Item on:click={() => alert('Mock action')}>
+					<DropdownMenu.Item onclick={() => alert('Mock action')}>
 						<Trash size={16} />
 						<span class="pl-2">Cancel task</span>
 					</DropdownMenu.Item>

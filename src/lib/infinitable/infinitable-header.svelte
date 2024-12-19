@@ -41,8 +41,8 @@
 		: undefined;
 	let width: string | number = $state('auto');
 	let elementWidth: number = $state(0);
-	let lastResetFlag = $resetFlag;
-	let sortDirection: SortDirection | undefined = undefined;
+	let lastResetFlag = $state($resetFlag);
+	let sortDirection: SortDirection | undefined = $state(undefined);
 
 	$effect(() => {
 		elementWidth;
@@ -61,7 +61,7 @@
 	});
 
 	$effect(() => {
-		if ($sorting?.header !== header && sortDirection) {
+		if ($sorting?.header.sort?.property !== header.sort?.property && sortDirection) {
 			sortDirection = undefined;
 		}
 	});
@@ -133,17 +133,22 @@
 	}
 
 	function sort() {
-		if (!header.sort) {
+		const headerSnap = $state.snapshot(header);
+		if (!headerSnap.sort) {
 			return;
 		}
 
 		if (sortDirection) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
 		} else {
-			sortDirection = header.sort?.defaultDirection ?? 'asc';
+			sortDirection = headerSnap.sort.defaultDirection ?? 'asc';
 		}
 
-		onSortChange({ header, property: header.sort.property, direction: sortDirection });
+		onSortChange({
+			header: headerSnap,
+			property: headerSnap.sort.property,
+			direction: sortDirection
+		});
 	}
 
 	const onResize = debounce(() => {
@@ -239,16 +244,20 @@
 >
 	<div class="flex items-center justify-start gap-1.5">
 		{#if header.sort}
-			<Tooltip.Root>
-				<Tooltip.Trigger asChild let:builder>
-					<Button on:click={sort} builders={[builder]} variant="link" class="h-7 p-0">
-						{header.label}
-					</Button>
-				</Tooltip.Trigger>
-				<Tooltip.Content>
-					<p>Sort by {header.label.toLowerCase()}</p>
-				</Tooltip.Content>
-			</Tooltip.Root>
+			<Tooltip.Provider delayDuration={200}>
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<Button {...props} onclick={sort} variant="link" class="h-7 p-0">
+								{header.label}
+							</Button>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content class="font-normal">
+						<p>Sort by {header.label.toLowerCase()}</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</Tooltip.Provider>
 		{:else}
 			<span class="font-semibold">
 				{header.label}
@@ -256,21 +265,27 @@
 		{/if}
 		{#if isFilterHeader(header) && filter}
 			<Popover.Root>
-				<Popover.Trigger asChild let:builder={popoverBuilder}>
-					<Tooltip.Root>
-						<Tooltip.Trigger asChild let:builder={tooltipBuilder}>
-							<Button
-								builders={[popoverBuilder, tooltipBuilder]}
-								variant="link"
-								class="h-7 w-7 p-0"
-							>
-								<InfinitableFilterIcon showBadge={!filter.isDefault} />
-							</Button>
-						</Tooltip.Trigger>
-						<Tooltip.Content>
-							<p>Open filter</p>
-						</Tooltip.Content>
-					</Tooltip.Root>
+				<Popover.Trigger>
+					{#snippet child(popover)}
+						<Tooltip.Provider delayDuration={200}>
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child(tooltip)}
+										<Button
+											{...{ ...tooltip.props, ...popover.props }}
+											variant="link"
+											class="h-7 w-7 p-0"
+										>
+											<InfinitableFilterIcon showBadge={!filter.isDefault} />
+										</Button>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content class="font-normal">
+									<p>Open filter</p>
+								</Tooltip.Content>
+							</Tooltip.Root>
+						</Tooltip.Provider>
+					{/snippet}
 				</Popover.Trigger>
 
 				<Popover.Content class="p-0">

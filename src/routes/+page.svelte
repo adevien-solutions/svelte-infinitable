@@ -7,9 +7,13 @@
 <div class="prose mx-auto text-center prose-p:text-balance">
 	<h1 class="mb-2">Svelte Infinitable</h1>
 	<div class="flex items-center justify-center">
-		<Button variant="ghost" href="https://github.com/adevien-solutions/svelte-infinitable">
+		<Button
+			variant="ghost"
+			href="https://github.com/adevien-solutions/svelte-infinitable"
+			class="h-auto [&_svg]:size-7"
+		>
 			<span class="sr-only">GitHub</span>
-			<GitHub size={24} />
+			<GitHub />
 		</Button>
 	</div>
 	<p>

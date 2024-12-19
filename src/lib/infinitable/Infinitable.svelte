@@ -543,7 +543,7 @@
 <div class="mb-4 flex flex-wrap items-center justify-center gap-4">
 	<Button
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			internalState = 'loading';
 			items = [];
 		}}
@@ -552,7 +552,7 @@
 	</Button>
 	<Button
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			internalState = 'completed';
 			items = [];
 		}}
@@ -561,7 +561,7 @@
 	</Button>
 	<Button
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			internalState = 'error';
 			items = [];
 		}}
@@ -570,7 +570,7 @@
 	</Button>
 	<Button
 		size="sm"
-		on:click={() => {
+		onclick={() => {
 			internalState = 'idle';
 			items = [];
 		}}
@@ -592,29 +592,33 @@
 		<div class="flex flex-wrap items-center justify-start gap-1">
 			{@render actionsStart?.({ wrapper: actionRowElement })}
 			{#if refreshable}
-				<Tooltip.Root>
-					<Tooltip.Trigger asChild let:builder>
-						<Button
-							builders={[builder]}
-							variant="ghost"
-							on:click={refresh}
-							disabled={internalState === 'loading'}
-						>
-							<RotateCW size={16} class={internalState === 'loading' ? 'animate-spin' : ''} />
-							<span class="pl-2"> Refresh </span>
-						</Button>
-					</Tooltip.Trigger>
-					<Tooltip.Content>
-						<p class="pt-0.5 text-xs text-gray-500">
-							Refreshed {lastRefresh?.value}
-						</p>
-					</Tooltip.Content>
-				</Tooltip.Root>
+				<Tooltip.Provider delayDuration={200}>
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<Button
+									{...props}
+									variant="ghost"
+									onclick={refresh}
+									disabled={internalState === 'loading'}
+								>
+									<RotateCW size={16} class={internalState === 'loading' ? 'animate-spin' : ''} />
+									<span> Refresh </span>
+								</Button>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content class="font-normal">
+							<p class="pt-0.5 text-xs text-gray-500">
+								Refreshed {lastRefresh?.value}
+							</p>
+						</Tooltip.Content>
+					</Tooltip.Root>
+				</Tooltip.Provider>
 			{/if}
 			{#if filterable}
-				<Button variant="ghost" on:click={clearFilters} disabled={allFiltersDefault}>
+				<Button variant="ghost" onclick={clearFilters} disabled={allFiltersDefault}>
 					<X size={16} />
-					<span class="pl-2">Clear filters</span>
+					<span>Clear filters</span>
 				</Button>
 			{/if}
 			{@render actionsEnd?.({ wrapper: actionRowElement })}
