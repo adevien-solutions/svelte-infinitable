@@ -15,6 +15,10 @@ export function debounce<T extends (...args: unknown[]) => unknown>(fn: T, delay
 	} as T;
 }
 
+export function uniqueId(prefix = '') {
+	return `${prefix}${Math.random().toString(36).substring(2, 9)}`;
+}
+
 export function isFilterHeader(header: TableHeader): header is TableFilterHeader {
 	return (
 		'filter' in header &&
@@ -27,13 +31,14 @@ export function isFilterHeader(header: TableHeader): header is TableFilterHeader
 
 export function searchSettingsToFilter(settings: TableSearchSettings | undefined, value: string) {
 	const searchTerm = value.trim();
-	if (!(settings && searchTerm) || settings.type === 'server') {
+	if (!(settings && searchTerm) || settings.mode === 'server') {
 		return;
 	}
 
 	if ('onSearch' in settings) {
 		return {
 			type: 'custom',
+			mode: 'custom',
 			value: searchTerm,
 			isDefault: searchTerm === '',
 			onFilter: settings.onSearch,
@@ -43,6 +48,7 @@ export function searchSettingsToFilter(settings: TableSearchSettings | undefined
 
 	return {
 		type: 'text',
+		mode: 'auto',
 		property: settings.property,
 		value: searchTerm,
 		isDefault: searchTerm === '',

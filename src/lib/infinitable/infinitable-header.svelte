@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ChevronDown from 'lucide-svelte/icons/chevron-down';
 	import ChevronUp from 'lucide-svelte/icons/chevron-up';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, type Snippet } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { twMerge } from 'tailwind-merge';
 	import Button from '../components/ui/button/button.svelte';
@@ -12,17 +12,17 @@
 	import { getInfiniteTableContext } from './context.js';
 	import * as Filter from './filters/index.js';
 	import InfinitableFilterIcon from './infinitable-filter-icon.svelte';
-	import type { FilterChangeEventParam, SortDirection, TableHeader } from './types.js';
-	import { debounce, isFilterHeader } from './utils.svelte.js';
+	import type { SortDirection, TableHeader, WithRequired } from './types.js';
+	import { debounce, isFilterHeader, uniqueId } from './utils.svelte.js';
 
 	type Props = {
 		header: TableHeader;
 		class?: string;
-		onFilter?: (details: Omit<FilterChangeEventParam, 'isAllReset'>) => void;
+		children?: Snippet;
 		[key: string]: any;
 	};
 
-	let { header, class: c = '', onFilter = () => {}, children, ...rest }: Props = $props();
+	let { header, class: c = '', children, ...rest }: Props = $props();
 	const {
 		sorting,
 		onFilterMount,
@@ -32,13 +32,16 @@
 		resetFlag,
 		element: { table }
 	} = getInfiniteTableContext();
-	const filter = isFilterHeader(header)
-		? {
-				value: header.filter.value as any,
-				defaultValue: header.filter.value,
-				isDefault: true
-			}
-		: undefined;
+	const id = uniqueId(header.label);
+	const filter = $state(
+		isFilterHeader(header)
+			? {
+					value: header.filter.value as any,
+					defaultValue: header.filter.value,
+					isDefault: true
+				}
+			: undefined
+	);
 	let width: string | number = $state('auto');
 	let elementWidth: number = $state(0);
 	let lastResetFlag = $state($resetFlag);
@@ -61,7 +64,7 @@
 	});
 
 	$effect(() => {
-		if ($sorting?.header.sort?.property !== header.sort?.property && sortDirection) {
+		if (sortDirection && $sorting?.id !== id) {
 			sortDirection = undefined;
 		}
 	});
@@ -99,8 +102,8 @@
 			return;
 		}
 
-		if (header.filter.type === 'custom') {
-			filter.isDefault = header.filter.isDefaultValue(header.filter.value);
+		if (header.filter.mode === 'custom') {
+			filter.isDefault = header.filter.isDefaultValue(header.filter.value as any);
 		} else {
 			try {
 				const currentValue = JSON.stringify(header.filter.value);
@@ -112,14 +115,13 @@
 		}
 	}
 
-	function updateFilter(isAllReset = false): void {
+	function updateFilter(isUserReset = false): void {
 		if (!(isFilterHeader(header) && filter)) {
 			return;
 		}
 
 		const detail = { header, isDefault: filter.isDefault };
-		onFilter(detail);
-		onFilterChange({ ...detail, isAllReset });
+		onFilterChange(detail, isUserReset);
 	}
 
 	function handleKeyDown(e: KeyboardEvent) {
@@ -133,7 +135,7 @@
 	}
 
 	function sort() {
-		const headerSnap = $state.snapshot(header);
+		const headerSnap = $state.snapshot(header) as WithRequired<TableHeader, 'sort'>;
 		if (!headerSnap.sort) {
 			return;
 		}
@@ -145,8 +147,8 @@
 		}
 
 		onSortChange({
+			id,
 			header: headerSnap,
-			property: headerSnap.sort.property,
 			direction: sortDirection
 		});
 	}
@@ -250,11 +252,34 @@
 						{#snippet child({ props })}
 							<Button {...props} onclick={sort} variant="link" class="h-7 p-0">
 								{header.label}
+								{#if $sorting?.id === id}
+									{#if $sorting.direction === 'asc'}
+										<span in:fade|local={{ duration: 200 }}>
+											<ChevronUp size={16} />
+										</span>
+									{:else if $sorting.direction === 'desc'}
+										<span in:fade|local={{ duration: 200 }}>
+											<ChevronDown size={16} />
+										</span>
+									{/if}
+								{/if}
 							</Button>
 						{/snippet}
 					</Tooltip.Trigger>
 					<Tooltip.Content class="font-normal">
-						<p>Sort by {header.label.toLowerCase()}</p>
+						<p>
+							Sort
+							{#if $sorting?.id === id}
+								{#if $sorting?.direction === 'asc'}
+									descending
+								{:else}
+									ascending
+								{/if}
+							{:else if header.sort}
+								{header.sort.defaultDirection === 'asc' ? 'ascending' : 'descending'}
+							{/if}
+							by {header.label.toLowerCase()}
+						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</Tooltip.Provider>
@@ -273,7 +298,7 @@
 									{#snippet child(tooltip)}
 										<Button
 											{...{ ...tooltip.props, ...popover.props }}
-											variant="link"
+											variant="ghost"
 											class="h-7 w-7 p-0"
 										>
 											<InfinitableFilterIcon showBadge={!filter.isDefault} />
@@ -316,17 +341,6 @@
 					</div>
 				</Popover.Content>
 			</Popover.Root>
-		{/if}
-		{#if $sorting?.header === header}
-			{#if $sorting.direction === 'asc'}
-				<span in:fade|local={{ duration: 200 }}>
-					<ChevronUp size={16} />
-				</span>
-			{:else if $sorting.direction === 'desc'}
-				<span in:fade|local={{ duration: 200 }}>
-					<ChevronDown size={16} />
-				</span>
-			{/if}
 		{/if}
 	</div>
 </th>

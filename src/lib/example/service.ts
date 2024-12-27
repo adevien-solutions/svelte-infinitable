@@ -1,3 +1,4 @@
+import type { SortDirection } from '../infinitable/types.js';
 import { projects, tasks } from './data.js';
 import type { ProjectData, TaskData } from './types.js';
 
@@ -5,8 +6,8 @@ export async function getTasks(
 	page = 1,
 	limit = 100,
 	search = '',
-	sort: keyof TaskData = 'created_at',
-	order: 'asc' | 'desc' = 'desc'
+	sortBy: keyof TaskData = 'created_at',
+	direction: SortDirection = 'desc'
 ): Promise<{ data: TaskData[]; depleted: boolean; total: number }> {
 	return new Promise((resolve) => {
 		setTimeout(() => {
@@ -19,15 +20,13 @@ export async function getTasks(
 				});
 			}
 
-			if (sort && order) {
+			if (sortBy && direction) {
 				filteredTasks.sort((a, b) => {
-					const aValue = a[sort];
-					const bValue = b[sort];
-					if (aValue < bValue) {
-						return order === 'asc' ? -1 : 1;
-					}
-					if (aValue > bValue) {
-						return order === 'asc' ? 1 : -1;
+					const aValue = a[sortBy];
+					const bValue = b[sortBy];
+					const comparison = aValue.localeCompare(bValue);
+					if (comparison) {
+						return direction === 'asc' ? comparison : -comparison;
 					}
 					return 0;
 				});

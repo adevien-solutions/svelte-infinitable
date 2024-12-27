@@ -6,7 +6,7 @@
 	import Search from 'lucide-svelte/icons/search';
 	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
 	import X from 'lucide-svelte/icons/x';
-	import { tick, untrack, type Snippet } from 'svelte';
+	import { onMount, tick, untrack, type Snippet } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { twMerge } from 'tailwind-merge';
 	import { Button } from '../components/ui/button/index.js';
@@ -14,13 +14,20 @@
 	import InfiniteTableRow from './infinitable-row.svelte';
 	import InfiniteTableSearch from './infinitable-search.svelte';
 	import type {
-		FilterChangeEventParam,
-		InfiniteEventParam,
-		RefreshEventParam,
-		SearchEventParam,
-		SelectChangeEventParam,
-		SortingChangeEventParam,
+		FilterDetailItem,
+		FilterHandler,
+		InfiniteDetail,
+		InfiniteHandler,
+		InternalSortDetail,
+		RefreshDetail,
+		RefreshHandler,
+		SearchDetail,
+		SearchHandler,
+		SelectHandler,
+		SortDetail,
+		SortHandler,
 		TableFilterHeader,
+		TableHeader,
 		TableItem,
 		TableSearchSettings
 	} from './types.js';
@@ -39,6 +46,15 @@
 		items?: TableItem[];
 		/** The height of each row in pixels. */
 		rowHeight: number;
+		/**
+		 * Controls whether the searching, filtering, and sorting of the table
+		 * is done on the client or not. If set to `true`, the `onSearch`,
+		 * `onFilter`, and `onSort` callbacks are ignored, and the component
+		 * will handle all of them.
+		 *
+		 * @default false
+		 */
+		clientMode?: boolean;
 		/**
 		 * Controls whether the table rows are selectable or not.
 		 *
@@ -102,13 +118,17 @@
 		 ********/
 
 		/** Called when the user clicks the refresh button. */
-		onRefresh?: ((param: RefreshEventParam) => void) | undefined;
-		/** Called when the user types in the search input. */
-		onSearch?: ((param: SearchEventParam) => void) | undefined;
-		/** Called when the selected items change. */
-		onSelect?: ((param: SelectChangeEventParam) => void) | undefined;
+		onRefresh?: RefreshHandler | undefined;
 		/** Called when the table has reached the end of the loaded data. */
-		onInfinite?: ((param: InfiniteEventParam) => void) | undefined;
+		onInfinite?: InfiniteHandler | undefined;
+		/** Called when the user types in the search input, and it's in `server` mode. */
+		onSearch?: SearchHandler | undefined;
+		/** Called when the filtering of the table changes, and it's in `server` mode. */
+		onFilter?: FilterHandler | undefined;
+		/** Called when the sorting of the table changes, and it's in `server` mode. */
+		onSort?: SortHandler | undefined;
+		/** Called when the selected items change. */
+		onSelect?: SelectHandler | undefined;
 
 		/******
 		 * Slots
@@ -144,9 +164,11 @@
 		ignoreInfinite = false,
 		// Events
 		onRefresh = undefined,
-		onSearch = undefined,
-		onSelect = undefined,
 		onInfinite = undefined,
+		onSearch = undefined,
+		onFilter = undefined,
+		onSort = undefined,
+		onSelect = undefined,
 		// Slots
 		children,
 		actionsStart,
@@ -188,11 +210,12 @@
 	let rowCount = $state(0);
 	let selectedCount = $state(0);
 	let searchValue = $state('');
-	let sorting = writable<SortingChangeEventParam | undefined>(undefined);
+	let sorting = writable<InternalSortDetail | undefined>(undefined);
 	let errorMessage = $state('');
 	let internalState = $state<'idle' | 'loading' | 'completed' | 'error'>('idle');
 	let lastRefresh = $state<ReturnType<typeof createTickingRelativeTime>>();
 	let isInitialLoad = $state(ignoreInfinite);
+	let isMounted = $state(false);
 
 	setInfiniteTableContext({
 		element: {
@@ -212,27 +235,35 @@
 
 	$effect(() => {
 		items;
-		untrack(() => {
-			resetLastRefresh();
-			applyFilteringAndOrdering();
-		});
+		if (isMounted) {
+			untrack(() => {
+				resetLastRefresh();
+				applyFilteringAndOrdering();
+			});
+		}
 	});
 	$effect(() => {
 		rowHeight;
-		untrack(() => {
-			onScroll();
-		});
+		if (isMounted) {
+			untrack(() => {
+				onScroll();
+			});
+		}
+	});
+
+	onMount(() => {
+		isMounted = true;
 	});
 
 	function resetInternalItems() {
 		internalItems = items.map((data, index) => ({ data, index }));
 	}
 
-	function onSearchChange(value: string) {
+	async function onSearchChange(value: string) {
 		searchValue = value;
-		if (search?.type === 'server') {
+		if (search?.mode === 'server') {
 			internalState = 'loading';
-			search.onSearch({ value, ...refreshEventHandlers });
+			await onSearch?.({ value }, refreshEventHandlers);
 			return;
 		}
 		applyFilteringAndOrdering();
@@ -250,17 +281,46 @@
 		applyFilteringAndOrdering();
 	}
 
-	function onFilterChange(detail: FilterChangeEventParam) {
+	function onFilterChange(detail: FilterDetailItem, isUserReset: boolean) {
 		filterIsDefault.set(detail.header, detail.isDefault);
 		allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
-		if (!detail.isAllReset) {
+
+		// Calling a server through the provided event handler
+		if (detail.header.filter.mode === 'server') {
+			if (!onFilter) {
+				return;
+			}
+
+			const all = [...filterIsDefault.entries()].map(([header, isDefault]) => ({
+				header,
+				isDefault
+			}));
+			return onFilter({ current: detail, all }, refreshEventHandlers);
+		}
+
+		// Handling on the client side
+		if (!isUserReset) {
 			applyFilteringAndOrdering();
 		}
 	}
 
-	function onSortChange(detail: SortingChangeEventParam) {
+	function onSortChange(detail: InternalSortDetail) {
 		$sorting = detail;
-		sortItems();
+
+		// Calling a server through the provided event handler
+		if (detail.header.sort.mode === 'server') {
+			if (!onSort) {
+				return;
+			}
+
+			const { id, ...sortDetail } = detail;
+			return onSort(sortDetail, refreshEventHandlers);
+		}
+
+		// Handling on the client side
+		if (detail.header.sort.mode === 'auto') {
+			sortItems();
+		}
 	}
 
 	function filterItems() {
@@ -269,7 +329,15 @@
 		const filters = filterIsDefault
 			.entries()
 			.toArray()
-			.map(([header]) => ({ ...header.filter }));
+			.reduce(
+				(acc, [header]) => {
+					if (header.filter && header.filter.mode !== 'server') {
+						acc.push(header.filter);
+					}
+					return acc;
+				},
+				[] as TableFilterHeader['filter'][]
+			);
 
 		// Converting the search to a filter, so it can be applied in one loop with the other filters.
 		const searchFilter = searchSettingsToFilter(search, searchValue);
@@ -280,12 +348,12 @@
 		internalItems = internalItems.filter(({ data, index }) => {
 			return filters.every((f) => {
 				// Handling custom filters
-				if (f.type === 'custom') {
+				if (f.mode === 'custom') {
 					return f.onFilter(data, index);
 				}
 
 				// Handling pre-made filters
-				if (!f.value || (Array.isArray(f.value) && f.value.length === 0)) {
+				if (f.mode !== 'auto' || !f.value || (Array.isArray(f.value) && f.value.length === 0)) {
 					return true;
 				}
 
@@ -317,12 +385,14 @@
 	}
 
 	function sortItems() {
-		if (!($sorting && $sorting.property)) {
+		if (!($sorting && $sorting.header.sort.mode === 'auto' && $sorting.header.sort.property)) {
 			return;
 		}
 
+		const { property } = $sorting.header.sort;
+		const propChain = property.split('.');
+
 		internalItems.sort((a, b) => {
-			const propChain = $sorting!.property.split('.');
 			const aValue = propChain.reduce((acc, key) => acc[key], a.data);
 			const bValue = propChain.reduce((acc, key) => acc[key], b.data);
 
@@ -471,6 +541,34 @@
 	}
 
 	/**
+	 * Get the current details of the search, filters, and sort.
+	 * Useful for server-side handling, so state doesn't need to be kept individually.
+	 * @returns An object containing the search, filters, and sort details.
+	 */
+	export function getSearchFilterSort<T extends TableHeader[] = TableHeader[]>(): {
+		search: SearchDetail;
+		filters: FilterDetailItem[];
+		sort: SortDetail<T[number]> | undefined;
+	} {
+		let sort: SortDetail<T[number]> | undefined;
+		if ($sorting) {
+			const { id, ...sortingDetails } = $sorting;
+			sort = sortingDetails;
+		}
+		return {
+			search: { value: searchValue ?? '' },
+			filters: [...filterIsDefault.entries()].map(
+				([header, isDefault]) =>
+					({
+						header,
+						isDefault
+					}) as FilterDetailItem
+			),
+			sort
+		};
+	}
+
+	/**
 	 * Clear the selection of the rows.
 	 */
 	export function clearSelection(): void {
@@ -505,7 +603,7 @@
 	// Functions passed to the "infinte" event //
 	/////////////////////////////////////////////
 
-	const infiniteEventHandlers: InfiniteEventParam = {
+	const infiniteEventHandlers: InfiniteDetail = {
 		loaded: (newItems: TableItem[]) => {
 			internalState = 'idle';
 			errorMessage = '';
@@ -522,7 +620,7 @@
 		}
 	};
 
-	const refreshEventHandlers: RefreshEventParam = {
+	const refreshEventHandlers: RefreshDetail = {
 		loaded: (i: TableItem[]) => {
 			internalState = 'idle';
 			errorMessage = '';
@@ -714,7 +812,7 @@
 				justify-center gap-2 text-center text-gray-600"
 				style="height: calc(100% - {headerHeight}px);"
 			>
-				{#if internalState === 'loading' || isInitialLoad}
+				{#if internalState === 'loading' || isInitialLoad || !isMounted}
 					<!-- Table is loading it's initial items -->
 					{#if loadingEmpty}
 						{@render loadingEmpty?.()}

@@ -1,10 +1,6 @@
 import { getContext, setContext } from 'svelte';
 import type { Readable } from 'svelte/store';
-import type {
-	FilterChangeEventParam,
-	SortingChangeEventParam,
-	TableFilterHeader
-} from './types.js';
+import type { FilterDetailItem, InternalSortDetail, TableFilterHeader } from './types.js';
 
 const infiniteTableContextKey = Symbol('infinite_table_context_key');
 
@@ -18,11 +14,11 @@ export type InfiniteTableContext = {
 	/** Controls whether the table rows are selectable or not. */
 	selectable: boolean;
 	allSelected: Readable<boolean>;
-	sorting: Readable<SortingChangeEventParam | undefined>;
+	sorting: Readable<InternalSortDetail | undefined>;
 	onFilterMount: (filterHeader: TableFilterHeader) => void;
-	onFilterChange: (detail: FilterChangeEventParam) => void;
+	onFilterChange: (detail: FilterDetailItem, isUserReset: boolean) => void;
 	onFilterDestroy: (filterHeader: TableFilterHeader) => void;
-	onSortChange: (detail: SortingChangeEventParam) => void;
+	onSortChange: (detail: InternalSortDetail) => void;
 	resetFlag: Readable<boolean>;
 };
 

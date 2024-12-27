@@ -10,6 +10,14 @@
 		type TaskData
 	} from '$lib/example/index.js';
 	import * as Infinitable from '$lib/infinitable/index.js';
+	import type {
+		InfiniteDetail,
+		RefreshDetail,
+		SearchDetail,
+		SelectDetail,
+		SortDetail,
+		SortDirection
+	} from '$lib/infinitable/types.js';
 	import ClipboardList from 'lucide-svelte/icons/clipboard-list';
 	import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
 	import Info from 'lucide-svelte/icons/info';
@@ -22,23 +30,28 @@
 	let page = 1;
 	let totalCount = 0;
 
-	async function loadItems(search?: string) {
+	async function loadItems(search?: string, sort?: keyof TaskData, direction?: SortDirection) {
 		const limit = 100;
-		const { data, depleted, total } = await getTasks(page++, limit, search);
+		const { data, depleted, total } = await getTasks(page++, limit, search, sort, direction);
 		totalCount = total;
 		return { data, depleted };
 	}
 
-	async function onInfinite({ loaded, completed, error }: Infinitable.InfiniteEventParam) {
+	async function onInfinite({ loaded, completed, error }: InfiniteDetail) {
 		try {
-			const { data, depleted } = await loadItems();
+			const { search, sort } = table.getSearchFilterSort<typeof tableHeaders>();
+			const { data, depleted } = await loadItems(
+				search?.value,
+				sort?.header?.meta?.name,
+				sort?.direction
+			);
 			depleted ? completed(data) : loaded(data);
 		} catch (e) {
 			error();
 		}
 	}
 
-	async function onRefresh({ loaded, completed, error }: Infinitable.RefreshEventParam) {
+	async function onRefresh({ loaded, completed, error }: RefreshDetail) {
 		try {
 			page = 1;
 			const { data, depleted } = await loadItems();
@@ -48,7 +61,7 @@
 		}
 	}
 
-	async function onSearch({ value, loaded, completed, error }: Infinitable.SearchEventParam) {
+	async function onSearch({ value }: SearchDetail, { loaded, completed, error }: RefreshDetail) {
 		try {
 			page = 1;
 			const { data, depleted } = await loadItems(value);
@@ -58,7 +71,21 @@
 		}
 	}
 
-	function onSelect(items: Infinitable.SelectChangeEventParam) {
+	async function onSort(
+		{ header, direction }: SortDetail,
+		{ loaded, completed, error }: RefreshDetail
+	) {
+		try {
+			page = 1;
+			const { search } = table.getSearchFilterSort<typeof tableHeaders>();
+			const { data, depleted } = await loadItems(search.value, header.meta?.name, direction);
+			depleted ? completed(data) : loaded(data);
+		} catch (e) {
+			error();
+		}
+	}
+
+	function onSelect(items: SelectDetail) {
 		selectedTasks = items.map((item) => item as TaskData);
 		// Array.every returns true if the array is empty
 		cancelDisabled = selectedTasks.every(({ state }) => isFinishedTaskState(state));
@@ -71,10 +98,12 @@
 	rowHeight={36}
 	refreshable
 	selectable
-	search={{ type: 'server', onSearch, placeholder: 'Search tasks' }}
-	{onSelect}
-	{onInfinite}
+	search={{ mode: 'server', placeholder: 'Search tasks' }}
 	{onRefresh}
+	{onInfinite}
+	{onSearch}
+	{onSort}
+	{onSelect}
 	class="h-[60vh] min-h-[400px]"
 >
 	{#snippet actionsStart()}

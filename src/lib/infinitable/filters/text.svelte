@@ -5,7 +5,7 @@
 		[key: string]: any;
 	};
 
-	let { value = $bindable(''), placeholder = 'Enter text to filter by', ...rest }: Props = $props();
+	let { value = $bindable(), placeholder = 'Enter text to filter by', ...rest }: Props = $props();
 </script>
 
 <div class="p-2">

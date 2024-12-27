@@ -58,9 +58,11 @@ export const statusOptions: { name: TaskState; label: string }[] = [
 export const tableHeaders: TableHeader[] = [
 	{
 		label: 'Task',
+		meta: {
+			name: 'name'
+		},
 		sort: {
-			property: 'name',
-			defaultDirection: 'asc'
+			mode: 'server'
 		},
 		style: {
 			minWidth: 250
@@ -68,12 +70,15 @@ export const tableHeaders: TableHeader[] = [
 	},
 	{
 		label: 'Project',
+		meta: {
+			name: 'project_name'
+		},
 		sort: {
-			property: 'project_name',
-			defaultDirection: 'asc'
+			mode: 'server'
 		},
 		filter: {
 			type: 'text',
+			mode: 'auto',
 			property: ['project_name', 'project_id'],
 			placeholder: 'Filter by project name or ID'
 		},
@@ -83,12 +88,15 @@ export const tableHeaders: TableHeader[] = [
 	},
 	{
 		label: 'Status',
+		meta: {
+			name: 'state'
+		},
 		sort: {
-			property: 'state',
-			defaultDirection: 'asc'
+			mode: 'server'
 		},
 		filter: {
 			type: 'multiSelect',
+			mode: 'auto',
 			property: 'state',
 			options: statusOptions,
 			value: statusOptions
@@ -99,8 +107,11 @@ export const tableHeaders: TableHeader[] = [
 	},
 	{
 		label: 'Created',
+		meta: {
+			name: 'created_at'
+		},
 		sort: {
-			property: 'created_at',
+			mode: 'server',
 			defaultDirection: 'asc'
 		},
 		style: {

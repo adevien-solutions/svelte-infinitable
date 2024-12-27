@@ -14,7 +14,7 @@
 	let internalOption = $state(
 		options.map((option) => ({
 			value: option,
-			checked: value.includes(option)
+			checked: value.find((v) => v.name === option.name) !== undefined
 		}))
 	);
 	// svelte-ignore state_referenced_locally
