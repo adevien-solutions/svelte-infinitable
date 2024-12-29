@@ -71,14 +71,11 @@
 		}
 	}
 
-	async function onSort(
-		{ header, direction }: SortDetail,
-		{ loaded, completed, error }: RefreshDetail
-	) {
+	async function onSort({ direction }: SortDetail, { loaded, completed, error }: RefreshDetail) {
 		try {
 			page = 1;
-			const { search } = table.getSearchFilterSort<typeof tableHeaders>();
-			const { data, depleted } = await loadItems(search.value, header.meta?.name, direction);
+			const { search, sort } = table.getSearchFilterSort<typeof tableHeaders>();
+			const { data, depleted } = await loadItems(search.value, sort?.header.meta?.name, direction);
 			depleted ? completed(data) : loaded(data);
 		} catch (e) {
 			error();
@@ -86,7 +83,7 @@
 	}
 
 	function onSelect(items: SelectDetail) {
-		selectedTasks = items.map((item) => item as TaskData);
+		selectedTasks = [...items] as TaskData[];
 		// Array.every returns true if the array is empty
 		cancelDisabled = selectedTasks.every(({ state }) => isFinishedTaskState(state));
 	}
@@ -99,11 +96,14 @@
 	refreshable
 	selectable
 	search={{ mode: 'server', placeholder: 'Search tasks' }}
+	rowDisabler={({ state }) => isFinishedTaskState(state)}
+	disabledRowMessage="Task is already finished"
 	{onRefresh}
 	{onInfinite}
 	{onSearch}
 	{onSort}
 	{onSelect}
+	debug
 	class="h-[60vh] min-h-[400px]"
 >
 	{#snippet actionsStart()}

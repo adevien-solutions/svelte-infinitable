@@ -1,5 +1,5 @@
 import type { TableHeader } from '$lib/infinitable/types.js';
-import type { TaskState } from './types.js';
+import type { TaskData, TaskState } from './types.js';
 
 export const taskStateData = {
 	'timed-out': {
@@ -55,7 +55,7 @@ export const statusOptions: { name: TaskState; label: string }[] = [
 	}
 ];
 
-export const tableHeaders: TableHeader[] = [
+export const tableHeaders: TableHeader<{ name: keyof TaskData }>[] = [
 	{
 		label: 'Task',
 		meta: {

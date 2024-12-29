@@ -327,13 +327,13 @@
 					<div class="flex items-center justify-between border-t p-1">
 						<Popover.Close
 							disabled={filter.isDefault}
-							on:click={reset}
+							onclick={reset}
 							class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
 						>
 							Reset
 						</Popover.Close>
 						<Popover.Close
-							on:click={save}
+							onclick={save}
 							class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
 						>
 							Save

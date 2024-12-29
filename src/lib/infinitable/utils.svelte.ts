@@ -35,7 +35,7 @@ export function searchSettingsToFilter(settings: TableSearchSettings | undefined
 		return;
 	}
 
-	if ('onSearch' in settings) {
+	if (settings.mode === 'custom') {
 		return {
 			type: 'custom',
 			mode: 'custom',

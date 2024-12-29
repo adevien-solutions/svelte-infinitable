@@ -14,6 +14,7 @@ export type CustomFiltering<T extends TableItem = TableItem> = (item: T, index: 
 type TableSearchMode<T extends 'server' | 'auto' | 'custom'> = {
 	/**
 	 * If the mode of search is `server`, you'll have to handle it on the server side.
+	 * To do this, provide the `onSearch` function for the table.
 	 *
 	 * Setting this to anything other than `server` will make the search client sided.
 	 *
@@ -67,20 +68,21 @@ export type TableSearchSettings = {
 	  })
 );
 
-export type TableBaseHeader<T extends AnyRecord = AnyRecord> = {
+export type TableBaseHeader<M extends AnyRecord = AnyRecord> = {
 	label: string;
 	sort?: TableHeaderSort;
 	style?: TableHeaderStyle;
 	/**
 	 * Additional data that can be used to add custom information about the header.
 	 */
-	meta?: T;
+	meta?: M;
 };
 
 type TableFilterModeOption = 'server' | 'auto' | 'custom';
 type TableFilterMode<T extends TableFilterModeOption = TableFilterModeOption> = {
 	/**
 	 * If the mode of the filter is `server`, you'll have to handle it on the server side.
+	 * To do this, provide the `onFilter` function for the table.
 	 *
 	 * Setting this to anything other than `server` will make the filter client sided.
 	 *
@@ -100,7 +102,7 @@ export type FilterOption = {
 };
 
 /** A free text filter. */
-export type TextFilterHeader = TableBaseHeader &
+export type TextFilterHeader<M extends AnyRecord = AnyRecord> = TableBaseHeader<M> &
 	GenericFilter<
 		{
 			type: 'text';
@@ -126,7 +128,10 @@ export type TextFilterHeader = TableBaseHeader &
 	>;
 
 /** A multi-select filter. */
-export type MultiSelectFilterHeader<T extends FilterOption = FilterOption> = TableBaseHeader &
+export type MultiSelectFilterHeader<
+	T extends FilterOption = FilterOption,
+	M extends AnyRecord = AnyRecord
+> = TableBaseHeader<M> &
 	GenericFilter<
 		{
 			type: 'multiSelect';
@@ -145,7 +150,7 @@ export type MultiSelectFilterHeader<T extends FilterOption = FilterOption> = Tab
 	>;
 
 /** A custom filter. */
-export type CustomFilterHeader<T = unknown> = TableBaseHeader &
+export type CustomFilterHeader<T = unknown, M extends AnyRecord = AnyRecord> = TableBaseHeader<M> &
 	GenericFilter<
 		{
 			type: 'custom';
@@ -159,9 +164,14 @@ export type CustomFilterHeader<T = unknown> = TableBaseHeader &
 		)
 	>;
 
-export type TableFilterHeader = TextFilterHeader | MultiSelectFilterHeader | CustomFilterHeader;
+export type TableFilterHeader<M extends AnyRecord = AnyRecord> =
+	| TextFilterHeader<M>
+	| MultiSelectFilterHeader<FilterOption, M>
+	| CustomFilterHeader<unknown, M>;
 
-export type TableHeader = TableBaseHeader | TableFilterHeader;
+export type TableHeader<M extends AnyRecord = AnyRecord> =
+	| TableBaseHeader<M>
+	| TableFilterHeader<M>;
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -181,6 +191,7 @@ export type TableHeaderStyle = {
 type TableSortMode<T extends 'server' | 'auto'> = {
 	/**
 	 * If the mode of sorting is `auto`, the sorting will be done on the client automatically, on the existing items.
+	 * To do this, provide the `onSort` function for the table.
 	 *
 	 * If the mode of sorting is `server`, you'll have to handle it on the server side.
 	 *

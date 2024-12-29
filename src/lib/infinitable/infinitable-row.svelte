@@ -74,7 +74,7 @@
 							<Tooltip.Trigger>
 								<Checkbox checked={selected} disabled={true} class={header ? 'mt-1' : 'mt-0.5'} />
 							</Tooltip.Trigger>
-							<Tooltip.Content class="font-normal">
+							<Tooltip.Content class="font-normal" side="right">
 								<p>{disabledMessage}</p>
 							</Tooltip.Content>
 						</Tooltip.Root>

@@ -2,6 +2,10 @@ import { getContext, setContext } from 'svelte';
 import type { Readable } from 'svelte/store';
 import type { FilterDetailItem, InternalSortDetail, TableFilterHeader } from './types.js';
 
+export enum InfinitableRunMode {
+	DEBUG = 'debug'
+}
+
 const infiniteTableContextKey = Symbol('infinite_table_context_key');
 
 export type InfiniteTableRowData<T = unknown> = { selected: boolean; meta?: Record<string, T> };

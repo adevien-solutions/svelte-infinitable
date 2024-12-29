@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { dev } from '$app/environment';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import Check from 'lucide-svelte/icons/check';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
@@ -10,7 +11,7 @@
 	import { writable } from 'svelte/store';
 	import { twMerge } from 'tailwind-merge';
 	import { Button } from '../components/ui/button/index.js';
-	import { setInfiniteTableContext } from './context.js';
+	import { InfinitableRunMode, setInfiniteTableContext } from './context.js';
 	import InfiniteTableRow from './infinitable-row.svelte';
 	import InfiniteTableSearch from './infinitable-search.svelte';
 	import type {
@@ -23,6 +24,7 @@
 		RefreshHandler,
 		SearchDetail,
 		SearchHandler,
+		SelectDetail,
 		SelectHandler,
 		SortDetail,
 		SortHandler,
@@ -112,6 +114,13 @@
 		 * @default false
 		 */
 		ignoreInfinite?: boolean;
+		/**
+		 * Enables the debug mode of the table. If set to `true`, the table will have buttons
+		 * to simulate different states.
+		 *
+		 * @default false
+		 */
+		debug?: boolean;
 
 		/*******
 		 * Events
@@ -162,6 +171,7 @@
 		rowDisabler = undefined,
 		disabledRowMessage = undefined,
 		ignoreInfinite = false,
+		debug = false,
 		// Events
 		onRefresh = undefined,
 		onInfinite = undefined,
@@ -432,8 +442,10 @@
 	function updateSelect(skipDispatch = false) {
 		selectedCount = selected.size;
 		isAllSelectorChecked = rowCount > 0 && selectedCount >= rowCount;
-		if (!skipDispatch) {
-			onSelect?.([...selected]);
+		if (!skipDispatch && onSelect) {
+			const items: SelectDetail = [];
+			selected.forEach((item) => items.push($state.snapshot(item)));
+			onSelect([...items]);
 		}
 	}
 
@@ -442,19 +454,19 @@
 		updateSelect();
 	}
 
-	async function onAllSelectorChange({ detail }: CustomEvent<boolean>) {
-		if ($allSelected === detail) {
+	async function onAllSelectorChange(isAllSelected: boolean) {
+		if ($allSelected === isAllSelected) {
 			// Setting $allSelected to the same value as it was before will not trigger a change,
 			// so we need to change it to a different value first.
-			$allSelected = !detail;
+			$allSelected = !isAllSelected;
 			await tick();
 		}
 
-		$allSelected = isAllSelectorChecked = detail;
-		const action = selected[detail ? 'add' : 'delete'].bind(selected);
+		$allSelected = isAllSelectorChecked = isAllSelected;
+		const action = selected[isAllSelected ? 'add' : 'delete'].bind(selected);
 
 		internalItems.forEach(({ index, data }) => {
-			if (rowDisabler?.(data, index)) {
+			if (rowDisabler?.($state.snapshot(data), index)) {
 				selected.delete(data);
 			} else {
 				action(data);
@@ -532,8 +544,9 @@
 	 * @returns An array of the selected items and their indicies.
 	 */
 	export function getSelectedItems(): { item: TableItem; index: number }[] {
-		return items.reduce<ReturnType<typeof getSelectedItems>>((acc, item, index) => {
-			if (selected.has(item)) {
+		return items.reduce<ReturnType<typeof getSelectedItems>>((acc, data, index) => {
+			if (selected.has(data)) {
+				const item = $state.snapshot(data);
 				acc.push({ item, index });
 			}
 			return acc;
@@ -542,7 +555,7 @@
 
 	/**
 	 * Get the current details of the search, filters, and sort.
-	 * Useful for server-side handling, so state doesn't need to be kept individually.
+	 * Useful for server-side handling, so state doesn't need to be synced constantly.
 	 * @returns An object containing the search, filters, and sort details.
 	 */
 	export function getSearchFilterSort<T extends TableHeader[] = TableHeader[]>(): {
@@ -638,44 +651,46 @@
 	};
 </script>
 
-<div class="mb-4 flex flex-wrap items-center justify-center gap-4">
-	<Button
-		size="sm"
-		onclick={() => {
-			internalState = 'loading';
-			items = [];
-		}}
-	>
-		Loading and empty
-	</Button>
-	<Button
-		size="sm"
-		onclick={() => {
-			internalState = 'completed';
-			items = [];
-		}}
-	>
-		Completed and empty
-	</Button>
-	<Button
-		size="sm"
-		onclick={() => {
-			internalState = 'error';
-			items = [];
-		}}
-	>
-		Errored and empty
-	</Button>
-	<Button
-		size="sm"
-		onclick={() => {
-			internalState = 'idle';
-			items = [];
-		}}
-	>
-		Idle and empty
-	</Button>
-</div>
+{#if debug && (dev || import.meta?.env?.PUBLIC_INFINITABLE_MODE === InfinitableRunMode.DEBUG)}
+	<div class="mb-4 flex flex-wrap items-center justify-center gap-4">
+		<Button
+			size="sm"
+			onclick={() => {
+				internalState = 'loading';
+				items = [];
+			}}
+		>
+			Loading and empty
+		</Button>
+		<Button
+			size="sm"
+			onclick={() => {
+				internalState = 'completed';
+				items = [];
+			}}
+		>
+			Completed and empty
+		</Button>
+		<Button
+			size="sm"
+			onclick={() => {
+				internalState = 'error';
+				items = [];
+			}}
+		>
+			Errored and empty
+		</Button>
+		<Button
+			size="sm"
+			onclick={() => {
+				internalState = 'idle';
+				items = [];
+			}}
+		>
+			Idle and empty
+		</Button>
+	</div>
+{/if}
 <div class={twMerge('flex flex-col text-sm', c)}>
 	<div
 		bind:this={actionRowElement}
@@ -733,7 +748,7 @@
 					index={0}
 					header
 					selected={isAllSelectorChecked}
-					on:change={onAllSelectorChange}
+					onChange={onAllSelectorChange}
 				>
 					{@render headers?.()}
 				</InfiniteTableRow>
@@ -747,7 +762,7 @@
 				{#each internalItems as { data, index }, position}
 					{#if position >= visibleRowIndex.start && position < visibleRowIndex.end}
 						<InfiniteTableRow
-							on:change={({ detail }) => onSelectorChange(detail, data)}
+							onChange={(isSelected) => onSelectorChange(isSelected, data)}
 							selected={selected.has(data)}
 							disabled={rowDisabler?.(data, index) ?? false}
 							disabledMessage={disabledRowMessage}
