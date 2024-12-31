@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { dev } from '$app/environment';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import Check from 'lucide-svelte/icons/check';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
@@ -114,13 +113,6 @@
 		 * @default false
 		 */
 		ignoreInfinite?: boolean;
-		/**
-		 * Enables the debug mode of the table. If set to `true`, the table will have buttons
-		 * to simulate different states.
-		 *
-		 * @default false
-		 */
-		debug?: boolean;
 
 		/*******
 		 * Events
@@ -171,7 +163,6 @@
 		rowDisabler = undefined,
 		disabledRowMessage = undefined,
 		ignoreInfinite = false,
-		debug = false,
 		// Events
 		onRefresh = undefined,
 		onInfinite = undefined,
@@ -655,7 +646,7 @@
 	};
 </script>
 
-{#if debug && (dev || import.meta?.env?.PUBLIC_INFINITABLE_MODE === InfinitableRunMode.DEBUG)}
+{#if import.meta?.env?.PUBLIC_INFINITABLE_MODE === InfinitableRunMode.DEBUG}
 	<div class="mb-4 flex flex-wrap items-center justify-center gap-4">
 		<Button
 			size="sm"

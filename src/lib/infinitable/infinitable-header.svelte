@@ -8,7 +8,7 @@
 	import { buttonVariants } from '../components/ui/button/index.js';
 	import * as Popover from '../components/ui/popover/index.js';
 	import * as Tooltip from '../components/ui/tooltip/index.js';
-	import { cn } from '../utils.js';
+	import { cn } from '../components/utils.js';
 	import { getInfiniteTableContext } from './context.js';
 	import * as Filter from './filters/index.js';
 	import InfinitableFilterIcon from './infinitable-filter-icon.svelte';

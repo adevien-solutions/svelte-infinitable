@@ -1,4 +1,4 @@
-import type { SortDirection } from '../infinitable/types.js';
+import type { SortDirection } from '$lib/infinitable/types.js';
 import { projects, tasks } from './data.js';
 import type { ProjectData, TaskData } from './types.js';
 

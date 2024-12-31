@@ -1,14 +1,6 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import {
-		formatDateString,
-		getTasks,
-		isFinishedTaskState,
-		tableHeaders,
-		taskStateData,
-		type TaskData
-	} from '$lib/example/index.js';
 	import * as Infinitable from '$lib/infinitable/index.js';
 	import type {
 		InfiniteDetail,
@@ -22,6 +14,14 @@
 	import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
 	import Info from 'lucide-svelte/icons/info';
 	import Trash from 'lucide-svelte/icons/trash';
+	import {
+		formatDateString,
+		getTasks,
+		isFinishedTaskState,
+		tableHeaders,
+		taskStateData,
+		type TaskData
+	} from './index.js';
 
 	let table: Infinitable.Root;
 	let items: TaskData[] = [];
@@ -103,7 +103,6 @@
 	{onSearch}
 	{onSort}
 	{onSelect}
-	debug
 	class="h-[60vh] min-h-[400px]"
 >
 	{#snippet actionsStart()}
