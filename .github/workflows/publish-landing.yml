@@ -1,0 +1,50 @@
+name: Publish landing page
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+
+jobs:
+  publish:
+    name: Publish to Cloudflare Pages
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      deployments: write
+
+    env:
+      PUBLIC_INFINITABLE_MODE: ${{ vars.MODE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.1.4
+          run_install: |
+            - recursive: true
+              args: [--frozen-lockfile, --strict-peer-dependencies]
+
+      - name: Build
+        run: pnpm build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: svelte-infinitable
+          directory: .svelte-kit/cloudflare
+          secrets: |
+            PUBLIC_INFINITABLE_MODE
+        env:
+          PUBLIC_INFINITABLE_MODE: ${{ vars.MODE }}
