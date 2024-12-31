@@ -88,15 +88,16 @@ export function createTickingRelativeTime(
 	date: Date,
 	tickRate: 'second' | 'minute' = 'minute'
 ): { value: string; cancel: () => void } {
-	let value = $state(formatRelativeTime(date));
+	const ticker = $state({
+		value: formatRelativeTime(date),
+		cancel: () => {}
+	});
 	const interval = setInterval(
 		() => {
-			value = formatRelativeTime(date);
+			ticker.value = formatRelativeTime(date);
 		},
 		tickRate === 'second' ? 1000 : 60000
 	);
-	return {
-		value,
-		cancel: () => clearInterval(interval)
-	};
+	ticker.cancel = () => clearInterval(interval);
+	return ticker;
 }

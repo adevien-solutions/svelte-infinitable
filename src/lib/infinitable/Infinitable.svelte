@@ -263,6 +263,10 @@
 
 	onMount(() => {
 		isMounted = true;
+
+		return () => {
+			lastRefresh?.cancel();
+		};
 	});
 
 	function resetInternalItems() {
@@ -721,7 +725,7 @@
 							{/snippet}
 						</Tooltip.Trigger>
 						<Tooltip.Content class="font-normal">
-							<p class="pt-0.5 text-xs text-gray-500">
+							<p>
 								Refreshed {lastRefresh?.value}
 							</p>
 						</Tooltip.Content>
