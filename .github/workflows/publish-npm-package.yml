@@ -14,6 +14,7 @@ jobs:
             - recursive: true
               args: [--frozen-lockfile, --strict-peer-dependencies]
       - run: pnpm i
-      - run: pnpm publish dist --access public
+      - run: pnpm package
+      - run: pnpm publish dist --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
