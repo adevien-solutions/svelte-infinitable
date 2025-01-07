@@ -12,13 +12,10 @@ on:
 jobs:
   publish:
     name: Publish to Cloudflare Pages
-
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
       deployments: write
-
     env:
       PUBLIC_INFINITABLE_MODE: ${{ vars.MODE }}
 
@@ -42,8 +39,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: svelte-infinitable
-          directory: ./.svelte-kit/cloudflare
+          command: pages deploy ./.svelte-kit/cloudflare --project-name=svelte-infinitable
           secrets: |
             PUBLIC_INFINITABLE_MODE
         env:
