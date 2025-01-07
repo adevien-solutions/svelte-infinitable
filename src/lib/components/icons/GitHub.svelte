@@ -1,5 +1,13 @@
 <script lang="ts">
-	let { size = 18 } = $props();
+	type Props = {
+		/**
+		 * The size (width and height) of the icon.
+		 * @default 18
+		 */
+		size?: number;
+	};
+
+	let { size = 18 }: Props = $props();
 </script>
 
 <svg width={size} height={size} viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">

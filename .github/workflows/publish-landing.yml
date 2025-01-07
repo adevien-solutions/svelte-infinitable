@@ -43,7 +43,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: svelte-infinitable
-          directory: .svelte-kit/cloudflare
+          directory: ./.svelte-kit/cloudflare
           secrets: |
             PUBLIC_INFINITABLE_MODE
         env:
