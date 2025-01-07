@@ -48,22 +48,13 @@
 		/** The height of each row in pixels. */
 		rowHeight: number;
 		/**
-		 * Controls whether the searching, filtering, and sorting of the table
-		 * is done on the client or not. If set to `true`, the `onSearch`,
-		 * `onFilter`, and `onSort` callbacks are ignored, and the component
-		 * will handle all of them.
-		 *
-		 * @default false
-		 */
-		clientMode?: boolean;
-		/**
 		 * Controls whether the table rows are selectable or not.
 		 *
 		 * @default false
 		 */
 		selectable?: boolean;
 		/**
-		 * Controls whether the table has a "refresh" button or not.
+		 * Controls whether the table has a refresh button or not.
 		 *
 		 * @default false
 		 */
@@ -73,7 +64,7 @@
 		 *
 		 * @default undefined
 		 */
-		search?: TableSearchSettings | undefined;
+		search?: TableSearchSettings;
 		/**
 		 * The number of rows to render above and below the visible area of the table.
 		 * Also controls how early the table will call the `onInfinite` function.
@@ -82,11 +73,15 @@
 		 */
 		overscan?: number;
 		/**
-		 * Classes to apply to the table wrapper element.
+		 * Controls whether the `onInfinite` function is called or not.
+		 * Useful to set to `true` if you know that you are going to load all the data at once.
 		 *
-		 * @default ''
+		 * If set to `true`, call `finishInitialLoad()` on the table component
+		 * when the initial load is completed.
+		 *
+		 * @default false
 		 */
-		class?: string;
+		ignoreInfinite?: boolean;
 		/**
 		 * A function that takes an item and an index as parameters,
 		 * and returns a boolean indicating whether the row
@@ -104,24 +99,20 @@
 		 */
 		disabledRowMessage?: string | undefined;
 		/**
-		 * Controls whether the `onInfinite` function is called or not.
-		 * Useful to set to `true` if you know that you are going to load all the data at once.
+		 * Classes to apply to the table wrapper element.
 		 *
-		 * If set to `true`, call `finishInitialLoad()` on the table component
-		 * when the initial load is completed.
-		 *
-		 * @default false
+		 * @default ''
 		 */
-		ignoreInfinite?: boolean;
+		class?: string;
 
 		/*******
 		 * Events
 		 ********/
 
-		/** Called when the user clicks the refresh button. */
-		onRefresh?: RefreshHandler | undefined;
 		/** Called when the table has reached the end of the loaded data. */
 		onInfinite?: InfiniteHandler | undefined;
+		/** Called when the user clicks the refresh button. */
+		onRefresh?: RefreshHandler | undefined;
 		/** Called when the user types in the search input, and it's in `server` mode. */
 		onSearch?: SearchHandler | undefined;
 		/** Called when the filtering of the table changes, and it's in `server` mode. */
@@ -135,20 +126,33 @@
 		 * Slots
 		 *******/
 
+		/** A slot for the table rows. */
 		children?: Snippet<
 			[{ item: TableItem; index: number; selectedCount: number; isAllSelected: boolean }]
 		>;
+		/** A slot at the start of the actions section. */
 		actionsStart?: Snippet<[{ wrapper: HTMLElement }]>;
+		/** A slot at the end of the actions section. */
 		actionsEnd?: Snippet<[{ wrapper: HTMLElement }]>;
+		/** A slot for the table headers. */
 		headers?: Snippet;
+		/** A slot to replace the loading indicator below existing rows. */
 		loader?: Snippet;
+		/** A slot to replace the message below existing rows, when the table has no more items. */
 		completed?: Snippet;
+		/** A slot to replace the screen when the table has items, but they are filtered out. */
 		empty?: Snippet;
+		/** A slot to replace the screen when the table is loading and empty. */
 		loadingEmpty?: Snippet;
+		/** A slot to replace the screen when the table has no more items and empty. */
 		completedEmpty?: Snippet;
+		/** A slot to replace the screen when the table has an error and empty. */
 		errorEmpty?: Snippet;
+		/** A slot to replace the screen when the table is idle and empty. */
 		idleEmpty?: Snippet;
+		/** A slot to replace the info message below the table. */
 		rowsDetail?: Snippet<[{ rowCount: number; selectedCount: number }]>;
+		/** A slot to replace the error message below the table. */
 		error?: Snippet<[{ message: string }]>;
 	};
 
