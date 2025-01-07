@@ -40,7 +40,3 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy ./.svelte-kit/cloudflare --project-name=svelte-infinitable
-          secrets: |
-            PUBLIC_INFINITABLE_MODE
-        env:
-          PUBLIC_INFINITABLE_MODE: ${{ vars.MODE }}
