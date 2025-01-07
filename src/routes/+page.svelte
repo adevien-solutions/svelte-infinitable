@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { GitHub } from '$lib/components/icons/index.js';
 	import { ExampleTable } from './example/index.js';
+	import { GitHub } from './icons/index.js';
 </script>
 
 <div class="prose mx-auto text-center prose-p:text-balance">
