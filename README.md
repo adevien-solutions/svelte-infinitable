@@ -3,11 +3,11 @@
 Svelte Infinitable is a virtual table component that uses native <kbd>table</kbd> elements and
 supports _infinite scrolling_, _searching_, _filtering_, _sorting_, and more.
 
-![Example table](https://raw.githubusercontent.com/adevien-solutions/svelte-infinitable/refs/heads/main/assets/example.png?token=GHSAT0AAAAAACWMHNVRE3DJIIXMMNPFUKNEZ35RKNA)
+![Example table](https://github.com/adevien-solutions/svelte-infinitable/blob/main/assets/example.png?raw=true)
 
 ## Sponsor
 
-[![Aluma](https://raw.githubusercontent.com/adevien-solutions/svelte-infinitable/refs/heads/main/assets/aluma.png?token=GHSAT0AAAAAACWMHNVQBQP35FXTQ3JJO4IAZ35RJ6Q)](https://aluma.io/?utm_source=svelte-infinitable&utm_medium=github&utm_campaign=sponsor)
+[![Aluma](https://github.com/adevien-solutions/svelte-infinitable/blob/main/assets/aluma.png?raw=true)](https://aluma.io/?utm_source=svelte-infinitable&utm_medium=github&utm_campaign=sponsor)
 
 ## Installation
 
