@@ -1,6 +1,6 @@
 <script lang="ts">
-	import GitHub from '$lib/components/icons/github.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { GitHub } from '$lib/components/icons/index.js';
 	import { ExampleTable } from './example/index.js';
 </script>
 
