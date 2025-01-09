@@ -46,6 +46,7 @@
 	let elementWidth: number = $state(0);
 	let lastResetFlag = $state($resetFlag);
 	let sortDirection: SortDirection | undefined = $state(undefined);
+	let filterOpen = $state(false);
 
 	$effect(() => {
 		elementWidth;
@@ -95,6 +96,12 @@
 		}
 		updateIsDefaultFilter();
 		updateFilter();
+	}
+
+	function submitFilterForm(event: Event): void {
+		event.preventDefault();
+		save();
+		filterOpen = false;
 	}
 
 	function updateIsDefaultFilter(): void {
@@ -289,7 +296,7 @@
 			</span>
 		{/if}
 		{#if isFilterHeader(header) && filter}
-			<Popover.Root>
+			<Popover.Root bind:open={filterOpen}>
 				<Popover.Trigger>
 					{#snippet child(popover)}
 						<Tooltip.Provider delayDuration={200}>
@@ -314,31 +321,35 @@
 				</Popover.Trigger>
 
 				<Popover.Content class="p-0">
-					<div class="relative max-h-[min(500px,100vh)] overflow-y-auto">
-						{#if children}
-							{@render children()}
-						{:else if header.filter.type === 'text'}
-							<Filter.Text bind:value={filter.value} placeholder={header.filter.placeholder} />
-						{:else if header.filter.type === 'multiSelect'}
-							<Filter.MultiSelect bind:value={filter.value} options={header.filter.options} />
-						{/if}
-					</div>
+					<form onsubmit={submitFilterForm}>
+						<div class="relative max-h-[min(500px,100vh)] overflow-y-auto">
+							{#if children}
+								{@render children()}
+							{:else if header.filter.type === 'text'}
+								<Filter.Text bind:value={filter.value} placeholder={header.filter.placeholder} />
+							{:else if header.filter.type === 'multiSelect'}
+								<Filter.MultiSelect bind:value={filter.value} options={header.filter.options} />
+							{/if}
+						</div>
 
-					<div class="flex items-center justify-between border-t p-1">
-						<Popover.Close
-							disabled={filter.isDefault}
-							onclick={reset}
-							class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
-						>
-							Reset
-						</Popover.Close>
-						<Popover.Close
-							onclick={save}
-							class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
-						>
-							Save
-						</Popover.Close>
-					</div>
+						<div class="flex items-center justify-between border-t p-1">
+							<Popover.Close
+								disabled={filter.isDefault}
+								onclick={reset}
+								type="button"
+								class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
+							>
+								Reset
+							</Popover.Close>
+							<Popover.Close
+								type="button"
+								onclick={submitFilterForm}
+								class={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'h-7 px-2')}
+							>
+								Save
+							</Popover.Close>
+						</div>
+					</form>
 				</Popover.Content>
 			</Popover.Root>
 		{/if}

@@ -19,6 +19,7 @@
 	);
 	// svelte-ignore state_referenced_locally
 	let allChecked = $state(internalOption.every((option) => option.checked));
+	let someChecked = $derived(!allChecked && internalOption.some((option) => option.checked));
 
 	function setValue() {
 		value = internalOption.reduce(
@@ -63,7 +64,7 @@
 		class="sticky left-0 top-0 mb-2 flex w-full items-center justify-between border-b bg-white p-2"
 	>
 		<Label class="flex items-center">
-			<Checkbox checked={allChecked} onclick={toggleAll} />
+			<Checkbox checked={allChecked} indeterminate={someChecked} onclick={toggleAll} />
 			<span class="pl-2 font-normal">Select all</span>
 		</Label>
 		<Button variant="ghost" size="sm" onclick={invert} class="ml-2 h-7 px-2">
