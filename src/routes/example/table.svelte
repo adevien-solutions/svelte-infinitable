@@ -4,13 +4,10 @@
 	import * as Infinitable from '$lib/infinitable/index.js';
 	import type {
 		FilterDetailItem,
-		FilterHandler,
 		InfiniteHandler,
+		RefreshDetail,
 		RefreshHandler,
-		SearchHandler,
 		SelectHandler,
-		SortDirection,
-		SortHandler,
 		TableHeader
 	} from '$lib/types/index.js';
 	import ClipboardList from 'lucide-svelte/icons/clipboard-list';
@@ -33,23 +30,27 @@
 	let page = 1;
 	let totalCount = 0;
 
-	async function loadItems(
-		search?: string,
-		filter?: Partial<Record<keyof TaskData, string[]>>,
-		sort?: keyof TaskData,
-		direction?: SortDirection
-	) {
+	async function loadItems(ignoreFiltering = false) {
 		const limit = 100;
-		const { data, depleted, total } = await getTasks(
-			page++,
-			limit,
-			search,
-			filter,
-			sort,
-			direction
-		);
+		let res: Awaited<ReturnType<typeof getTasks>>;
+
+		if (ignoreFiltering) {
+			res = await getTasks(page++, limit);
+		} else {
+			const { search, filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
+			res = await getTasks(
+				page++,
+				limit,
+				search?.value,
+				filtersToObject(filters),
+				sort?.header.meta?.name,
+				sort?.direction
+			);
+		}
+
+		const { total, ...rest } = res;
 		totalCount = total;
-		return { data, depleted };
+		return rest;
 	}
 
 	function filtersToObject(
@@ -84,13 +85,7 @@
 
 	const onInfinite: InfiniteHandler = async ({ loaded, completed, error }) => {
 		try {
-			const { search, filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
-			const { data, depleted } = await loadItems(
-				search?.value,
-				filtersToObject(filters),
-				sort?.header?.meta?.name,
-				sort?.direction
-			);
+			const { data, depleted } = await loadItems();
 			depleted ? completed(data) : loaded(data);
 		} catch (e) {
 			error();
@@ -100,55 +95,17 @@
 	const onRefresh: RefreshHandler = async ({ loaded, completed, error }) => {
 		try {
 			page = 1;
+			const { data, depleted } = await loadItems(true);
+			depleted ? completed(data) : loaded(data);
+		} catch (e) {
+			error();
+		}
+	};
+
+	const searchFilterSortHandler = async ({ loaded, completed, error }: RefreshDetail) => {
+		try {
+			page = 1;
 			const { data, depleted } = await loadItems();
-			depleted ? completed(data) : loaded(data);
-		} catch (e) {
-			error();
-		}
-	};
-
-	const onSearch: SearchHandler = async ({ loaded, completed, error }, { value }) => {
-		try {
-			page = 1;
-			const { filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
-			const { data, depleted } = await loadItems(
-				value,
-				filtersToObject(filters),
-				sort?.header.meta?.name,
-				sort?.direction
-			);
-			depleted ? completed(data) : loaded(data);
-		} catch (e) {
-			error();
-		}
-	};
-
-	const onFilter: FilterHandler = async ({ loaded, completed, error }) => {
-		try {
-			page = 1;
-			const { search, filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
-			const { data, depleted } = await loadItems(
-				search?.value,
-				filtersToObject(filters),
-				sort?.header.meta?.name,
-				sort?.direction
-			);
-			depleted ? completed(data) : loaded(data);
-		} catch (e) {
-			error();
-		}
-	};
-
-	const onSort: SortHandler = async ({ loaded, completed, error }, { direction }) => {
-		try {
-			page = 1;
-			const { search, filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
-			const { data, depleted } = await loadItems(
-				search?.value,
-				filtersToObject(filters),
-				sort?.header.meta?.name,
-				direction
-			);
 			depleted ? completed(data) : loaded(data);
 		} catch (e) {
 			error();
@@ -173,9 +130,9 @@
 	disabledRowMessage="Task is already finished"
 	{onRefresh}
 	{onInfinite}
-	{onSearch}
-	{onFilter}
-	{onSort}
+	onSearch={searchFilterSortHandler}
+	onFilter={searchFilterSortHandler}
+	onSort={searchFilterSortHandler}
 	{onSelect}
 	class="h-[60vh] min-h-[400px]"
 >
