@@ -1,13 +1,13 @@
 import type {
-	CustomFilterHeader,
+	CustomFilter,
 	TableFilterHeader,
 	TableHeader,
 	TableSearchSettings,
-	TextFilterHeader
-} from './types.js';
+	TextFilter
+} from '../types/index.js';
 
 export function debounce<T extends (...args: unknown[]) => unknown>(fn: T, delay: number) {
-	let timeout: number | undefined;
+	let timeout: NodeJS.Timeout | undefined;
 
 	return function (this: ThisParameterType<T>, ...args: Parameters<T>) {
 		clearTimeout(timeout);
@@ -21,7 +21,7 @@ export function uniqueId(prefix = '') {
 
 export function isFilterHeader(header: TableHeader): header is TableFilterHeader {
 	return (
-		'filter' in header &&
+		header.filter !== undefined &&
 		'type' in header.filter &&
 		(header.filter.type === 'text' ||
 			header.filter.type === 'multiSelect' ||
@@ -43,7 +43,7 @@ export function searchSettingsToFilter(settings: TableSearchSettings | undefined
 			isDefault: searchTerm === '',
 			onFilter: settings.onSearch,
 			isDefaultValue: (value: unknown) => value === ''
-		} satisfies CustomFilterHeader['filter'] & { isDefault: boolean };
+		} satisfies CustomFilter & { isDefault: boolean };
 	}
 
 	return {
@@ -55,7 +55,7 @@ export function searchSettingsToFilter(settings: TableSearchSettings | undefined
 		settings: {
 			caseSensitive: settings.caseSensitive
 		}
-	} satisfies TextFilterHeader['filter'] & { isDefault: boolean };
+	} satisfies TextFilter & { isDefault: boolean };
 }
 
 export function formatRelativeTime(date: Date): string {

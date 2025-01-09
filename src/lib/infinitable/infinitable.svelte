@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PUBLIC_INFINITABLE_MODE } from '$env/static/public';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import Check from 'lucide-svelte/icons/check';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
@@ -10,9 +11,6 @@
 	import { writable } from 'svelte/store';
 	import { twMerge } from 'tailwind-merge';
 	import { Button } from '../components/ui/button/index.js';
-	import { InfinitableRunMode, setInfiniteTableContext } from './context.js';
-	import InfiniteTableRow from './infinitable-row.svelte';
-	import InfiniteTableSearch from './infinitable-search.svelte';
 	import type {
 		FilterDetailItem,
 		FilterHandler,
@@ -31,7 +29,10 @@
 		TableHeader,
 		TableItem,
 		TableSearchSettings
-	} from './types.js';
+	} from '../types/index.js';
+	import { InfinitableRunMode, setInfiniteTableContext } from './context.js';
+	import InfiniteTableRow from './infinitable-row.svelte';
+	import InfiniteTableSearch from './infinitable-search.svelte';
 	import { createTickingRelativeTime, searchSettingsToFilter } from './utils.svelte.js';
 
 	type Props = {
@@ -272,7 +273,7 @@
 		searchValue = value;
 		if (search?.mode === 'server') {
 			internalState = 'loading';
-			await onSearch?.({ value }, refreshEventHandlers);
+			await onSearch?.(refreshEventHandlers, { value });
 			return;
 		}
 		applyFilteringAndOrdering();
@@ -304,7 +305,7 @@
 				header,
 				isDefault
 			}));
-			return onFilter({ current: detail, all }, refreshEventHandlers);
+			return onFilter(refreshEventHandlers, { current: detail, all });
 		}
 
 		// Handling on the client side
@@ -323,7 +324,7 @@
 			}
 
 			const { id, ...sortDetail } = detail;
-			return onSort(sortDetail, refreshEventHandlers);
+			return onSort(refreshEventHandlers, sortDetail);
 		}
 
 		// Handling on the client side
@@ -555,24 +556,37 @@
 	 * @returns An object containing the search, filters, and sort details.
 	 */
 	export function getSearchFilterSort<T extends TableHeader[] = TableHeader[]>(): {
-		search: SearchDetail;
-		filters: FilterDetailItem[];
+		search: SearchDetail | undefined;
+		filters: FilterDetailItem<T[number]>[] | undefined;
 		sort: SortDetail<T[number]> | undefined;
 	} {
+		let search: SearchDetail | undefined;
+		let filters: FilterDetailItem<T[number]>[] | undefined;
 		let sort: SortDetail<T[number]> | undefined;
+
+		if (searchValue) {
+			search = { value: searchValue };
+		}
+
 		if ($sorting) {
 			const { id, ...sortingDetails } = $sorting;
 			sort = sortingDetails;
 		}
-		return {
-			search: { value: searchValue ?? '' },
-			filters: [...filterIsDefault.entries()].map(
+
+		const filterEntries = [...filterIsDefault.entries()];
+		if (filterEntries.length > 0) {
+			filters = [...filterEntries].map(
 				([header, isDefault]) =>
 					({
 						header,
 						isDefault
-					}) as FilterDetailItem
-			),
+					}) as FilterDetailItem<T[number]>
+			);
+		}
+
+		return {
+			search,
+			filters,
 			sort
 		};
 	}
@@ -647,7 +661,7 @@
 	};
 </script>
 
-{#if import.meta?.env?.PUBLIC_INFINITABLE_MODE === InfinitableRunMode.DEBUG}
+{#if PUBLIC_INFINITABLE_MODE === InfinitableRunMode.DEBUG}
 	<div class="mb-4 flex flex-wrap items-center justify-center gap-4">
 		<Button
 			size="sm"

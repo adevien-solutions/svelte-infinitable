@@ -3,7 +3,7 @@
 	import Button from '../../components/ui/button/button.svelte';
 	import { Checkbox } from '../../components/ui/checkbox/index.js';
 	import { Label } from '../../components/ui/label/index.js';
-	import type { FilterOption } from '../types.js';
+	import type { FilterOption } from '../../types/index.js';
 
 	type Props = {
 		value: FilterOption[];

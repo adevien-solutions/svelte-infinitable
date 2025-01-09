@@ -1,4 +1,4 @@
-import type { SortDirection } from '$lib/infinitable/types.js';
+import type { SortDirection } from '$lib/types/index.js';
 import { projects, tasks } from './data.js';
 import type { ProjectData, TaskData } from './types.js';
 
@@ -6,6 +6,7 @@ export async function getTasks(
 	page = 1,
 	limit = 100,
 	search = '',
+	filter: Partial<Record<keyof TaskData, string[]>> = {},
 	sortBy: keyof TaskData = 'created_at',
 	direction: SortDirection = 'desc'
 ): Promise<{ data: TaskData[]; depleted: boolean; total: number }> {
@@ -17,6 +18,15 @@ export async function getTasks(
 				search = search.trim().toLowerCase();
 				filteredTasks = filteredTasks.filter((task) => {
 					return task.name.trim().toLowerCase().includes(search);
+				});
+			}
+
+			if (Object.keys(filter).length) {
+				filteredTasks = filteredTasks.filter((task) => {
+					return Object.entries(filter).every(([key, values]) => {
+						const value = task[key as keyof TaskData].toLowerCase();
+						return values.some((v) => value.includes(v.toLowerCase()));
+					});
 				});
 			}
 

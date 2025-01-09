@@ -3,13 +3,16 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as Infinitable from '$lib/infinitable/index.js';
 	import type {
-		InfiniteDetail,
-		RefreshDetail,
-		SearchDetail,
-		SelectDetail,
-		SortDetail,
-		SortDirection
-	} from '$lib/infinitable/types.js';
+		FilterDetailItem,
+		FilterHandler,
+		InfiniteHandler,
+		RefreshHandler,
+		SearchHandler,
+		SelectHandler,
+		SortDirection,
+		SortHandler,
+		TableHeader
+	} from '$lib/types/index.js';
 	import ClipboardList from 'lucide-svelte/icons/clipboard-list';
 	import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
 	import Info from 'lucide-svelte/icons/info';
@@ -30,18 +33,61 @@
 	let page = 1;
 	let totalCount = 0;
 
-	async function loadItems(search?: string, sort?: keyof TaskData, direction?: SortDirection) {
+	async function loadItems(
+		search?: string,
+		filter?: Partial<Record<keyof TaskData, string[]>>,
+		sort?: keyof TaskData,
+		direction?: SortDirection
+	) {
 		const limit = 100;
-		const { data, depleted, total } = await getTasks(page++, limit, search, sort, direction);
+		const { data, depleted, total } = await getTasks(
+			page++,
+			limit,
+			search,
+			filter,
+			sort,
+			direction
+		);
 		totalCount = total;
 		return { data, depleted };
 	}
 
-	async function onInfinite({ loaded, completed, error }: InfiniteDetail) {
+	function filtersToObject(
+		filters:
+			| FilterDetailItem<
+					TableHeader<{
+						name: keyof TaskData;
+					}>
+			  >[]
+			| undefined
+	) {
+		return filters?.reduce(
+			(acc, { header }) => {
+				if (!header.meta?.name) {
+					return acc;
+				}
+
+				if (header.filter.type === 'text' && header.filter.value) {
+					acc[header.meta.name] = [header.filter.value];
+				} else if (header.filter.type === 'multiSelect') {
+					const values = header.filter.value?.map(({ name }) => name);
+					if (values?.length) {
+						acc[header.meta.name] = values;
+					}
+				}
+
+				return acc;
+			},
+			{} as Partial<Record<keyof TaskData, string[]>>
+		);
+	}
+
+	const onInfinite: InfiniteHandler = async ({ loaded, completed, error }) => {
 		try {
-			const { search, sort } = table.getSearchFilterSort<typeof tableHeaders>();
+			const { search, filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
 			const { data, depleted } = await loadItems(
 				search?.value,
+				filtersToObject(filters),
 				sort?.header?.meta?.name,
 				sort?.direction
 			);
@@ -49,9 +95,9 @@
 		} catch (e) {
 			error();
 		}
-	}
+	};
 
-	async function onRefresh({ loaded, completed, error }: RefreshDetail) {
+	const onRefresh: RefreshHandler = async ({ loaded, completed, error }) => {
 		try {
 			page = 1;
 			const { data, depleted } = await loadItems();
@@ -59,34 +105,61 @@
 		} catch (e) {
 			error();
 		}
-	}
+	};
 
-	async function onSearch({ value }: SearchDetail, { loaded, completed, error }: RefreshDetail) {
+	const onSearch: SearchHandler = async ({ loaded, completed, error }, { value }) => {
 		try {
 			page = 1;
-			const { data, depleted } = await loadItems(value);
+			const { filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
+			const { data, depleted } = await loadItems(
+				value,
+				filtersToObject(filters),
+				sort?.header.meta?.name,
+				sort?.direction
+			);
 			depleted ? completed(data) : loaded(data);
 		} catch (e) {
 			error();
 		}
-	}
+	};
 
-	async function onSort({ direction }: SortDetail, { loaded, completed, error }: RefreshDetail) {
+	const onFilter: FilterHandler = async ({ loaded, completed, error }) => {
 		try {
 			page = 1;
-			const { search, sort } = table.getSearchFilterSort<typeof tableHeaders>();
-			const { data, depleted } = await loadItems(search.value, sort?.header.meta?.name, direction);
+			const { search, filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
+			const { data, depleted } = await loadItems(
+				search?.value,
+				filtersToObject(filters),
+				sort?.header.meta?.name,
+				sort?.direction
+			);
 			depleted ? completed(data) : loaded(data);
 		} catch (e) {
 			error();
 		}
-	}
+	};
 
-	function onSelect(items: SelectDetail) {
+	const onSort: SortHandler = async ({ loaded, completed, error }, { direction }) => {
+		try {
+			page = 1;
+			const { search, filters, sort } = table.getSearchFilterSort<typeof tableHeaders>();
+			const { data, depleted } = await loadItems(
+				search?.value,
+				filtersToObject(filters),
+				sort?.header.meta?.name,
+				direction
+			);
+			depleted ? completed(data) : loaded(data);
+		} catch (e) {
+			error();
+		}
+	};
+
+	const onSelect: SelectHandler = (items) => {
 		selectedTasks = [...items] as TaskData[];
 		// Array.every returns true if the array is empty
 		cancelDisabled = selectedTasks.every(({ state }) => isFinishedTaskState(state));
-	}
+	};
 </script>
 
 <Infinitable.Root
@@ -101,6 +174,7 @@
 	{onRefresh}
 	{onInfinite}
 	{onSearch}
+	{onFilter}
 	{onSort}
 	{onSelect}
 	class="h-[60vh] min-h-[400px]"

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Search from 'lucide-svelte/icons/search';
-	import type { TableSearchSettings } from './types.js';
+	import type { TableSearchSettings } from '../types/index.js';
 	import { debounce } from './utils.svelte.js';
 
 	type Props = {

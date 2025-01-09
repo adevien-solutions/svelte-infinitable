@@ -1,6 +1,6 @@
 import { getContext, setContext } from 'svelte';
 import type { Readable } from 'svelte/store';
-import type { FilterDetailItem, InternalSortDetail, TableFilterHeader } from './types.js';
+import type { FilterDetailItem, InternalSortDetail, TableFilterHeader } from '../types/index.js';
 
 export enum InfinitableRunMode {
 	DEBUG = 'debug'

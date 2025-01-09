@@ -9,10 +9,10 @@
 	import * as Popover from '../components/ui/popover/index.js';
 	import * as Tooltip from '../components/ui/tooltip/index.js';
 	import { cn } from '../components/utils.js';
+	import type { SortDirection, TableHeader, WithRequired } from '../types/index.js';
 	import { getInfiniteTableContext } from './context.js';
 	import * as Filter from './filters/index.js';
 	import InfinitableFilterIcon from './infinitable-filter-icon.svelte';
-	import type { SortDirection, TableHeader, WithRequired } from './types.js';
 	import { debounce, isFilterHeader, uniqueId } from './utils.svelte.js';
 
 	type Props = {

@@ -1,4 +1,4 @@
-import type { TableHeader } from '$lib/infinitable/types.js';
+import type { TableHeader } from '$lib/types/index.js';
 import type { TaskData, TaskState } from './types.js';
 
 export const taskStateData = {
@@ -78,8 +78,7 @@ export const tableHeaders: TableHeader<{ name: keyof TaskData }>[] = [
 		},
 		filter: {
 			type: 'text',
-			mode: 'auto',
-			property: ['project_name', 'project_id'],
+			mode: 'server',
 			placeholder: 'Filter by project name or ID'
 		},
 		style: {
@@ -96,8 +95,7 @@ export const tableHeaders: TableHeader<{ name: keyof TaskData }>[] = [
 		},
 		filter: {
 			type: 'multiSelect',
-			mode: 'auto',
-			property: 'state',
+			mode: 'server',
 			options: statusOptions,
 			value: statusOptions
 		},
