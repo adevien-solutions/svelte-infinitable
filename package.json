@@ -20,6 +20,7 @@
 		"type": "git",
 		"url": "https://github.com/adevien-solutions/svelte-infinitable"
 	},
+	"homepage": "https://infinitable.adevien.com/",
 	"files": [
 		"dist",
 		"!dist/**/*.test.*",
