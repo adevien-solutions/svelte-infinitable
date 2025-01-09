@@ -5,6 +5,8 @@ supports _infinite scrolling_, _searching_, _filtering_, _sorting_, and more.
 
 ![Example table](https://github.com/adevien-solutions/svelte-infinitable/blob/main/assets/example.png?raw=true)
 
+Live demo: [https://infinitable.adevien.com/](https://infinitable.adevien.com/)
+
 ## Sponsor
 
 [![Aluma](https://github.com/adevien-solutions/svelte-infinitable/blob/main/assets/aluma.png?raw=true)](https://aluma.io/?utm_source=svelte-infinitable&utm_medium=github&utm_campaign=sponsor)

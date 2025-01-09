@@ -1,6 +1,6 @@
 {
 	"name": "svelte-infinitable",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"scripts": {
 		"dev": "vite dev --open",
 		"build": "vite build",
@@ -16,6 +16,10 @@
 		"test:e2e": "playwright test"
 	},
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/adevien-solutions/svelte-infinitable"
+	},
 	"files": [
 		"dist",
 		"!dist/**/*.test.*",
