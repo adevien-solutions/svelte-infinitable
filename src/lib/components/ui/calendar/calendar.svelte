@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from '@/utils.js';
 	import { Calendar as CalendarPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
+	import { cn } from '../../utils.js';
 	import * as Calendar from './index.js';
 
 	let {

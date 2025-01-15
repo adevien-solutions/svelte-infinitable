@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import { cn } from '@/utils.js';
 	import { RangeCalendar as RangeCalendarPrimitive } from 'bits-ui';
 	import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+	import { cn } from '../../utils.js';
+	import { buttonVariants } from '../button/index.js';
 
 	let {
 		ref = $bindable(null),

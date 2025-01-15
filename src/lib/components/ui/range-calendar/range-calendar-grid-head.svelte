@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from '@/utils.js';
 	import { RangeCalendar as RangeCalendarPrimitive } from 'bits-ui';
+	import { cn } from '../../utils.js';
 
 	type $$Props = RangeCalendarPrimitive.GridHeadProps;
 

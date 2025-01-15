@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { cn } from '@/utils.js';
 	import { Checkbox as CheckboxPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
 	import Check from 'lucide-svelte/icons/check';
 	import Minus from 'lucide-svelte/icons/minus';
+	import { cn } from '../../utils.js';
 
 	let {
 		ref = $bindable(null),

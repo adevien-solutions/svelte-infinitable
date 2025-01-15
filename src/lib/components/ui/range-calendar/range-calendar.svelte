@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { cn } from '@/utils.js';
 	import { RangeCalendar as RangeCalendarPrimitive, type WithoutChildrenOrChild } from 'bits-ui';
+	import { cn } from '../../utils.js';
 	import * as RangeCalendar from './index.js';
 
 	let {

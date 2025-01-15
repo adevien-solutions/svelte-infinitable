@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { PUBLIC_INFINITABLE_MODE } from '$env/static/public';
-	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import Check from 'lucide-svelte/icons/check';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import RotateCW from 'lucide-svelte/icons/rotate-cw';
@@ -11,6 +10,7 @@
 	import { writable } from 'svelte/store';
 	import { twMerge } from 'tailwind-merge';
 	import { Button } from '../components/ui/button/index.js';
+	import * as Tooltip from '../components/ui/tooltip/index.js';
 	import type {
 		FilterDetailItem,
 		FilterHandler,
