@@ -1,6 +1,6 @@
 {
 	"name": "svelte-infinitable",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"scripts": {
 		"dev": "vite dev --open",
 		"build": "vite build",
@@ -36,6 +36,15 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"svelte": "./dist/index.js"
+		},
+		"./types": {
+			"types": "./dist/types/index.d.ts",
+			"svelte": "./dist/types/index.js"
+		},
+		"./types/*": {
+			"types": "./dist/types/index.d.ts",
+			"svelte": "./dist/types/index.js",
+			"default": "./dist/types/index.js"
 		}
 	},
 	"peerDependencies": {

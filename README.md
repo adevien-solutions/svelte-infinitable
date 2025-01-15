@@ -77,22 +77,20 @@ If you want to see a more complex one, check
 
 ```svelte
 <script lang="ts">
-	import * as Infinitable from '$lib/infinitable/index.js';
-	import type { InfiniteDetail } from '$lib/infinitable/types.js';
-	import { formatDateString, getTasks, tableHeaders, type TaskData } from './index.js';
+	import * as Infinitable from 'svelte-infinitable';
+	import type { InfiniteHandler } from 'svelte-infinitable/types';
+	import { formatDateString, getTasks, tableHeaders, type TaskData } from '$lib/utils.js';
 
 	let items: TaskData[] = [];
 	let page = 1;
-	let totalCount = 0;
 
 	async function loadItems() {
 		const limit = 100;
-		const { data, depleted, total } = await getTasks(page++, limit);
-		totalCount = total;
+		const { data, depleted } = await getTasks(page++, limit);
 		return { data, depleted };
 	}
 
-	async function onInfinite({ loaded, completed, error }: InfiniteDetail) {
+	const onInfinite: InfiniteHandler = async ({ loaded, completed, error }) => {
 		try {
 			const { data, depleted } = await loadItems();
 			depleted ? completed(data) : loaded(data);
