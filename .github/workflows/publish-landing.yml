@@ -16,8 +16,6 @@ jobs:
     permissions:
       contents: read
       deployments: write
-    env:
-      PUBLIC_INFINITABLE_MODE: ${{ vars.MODE }}
 
     steps:
       - name: Checkout

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { PUBLIC_INFINITABLE_MODE } from '$env/static/public';
 	import Check from 'lucide-svelte/icons/check';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import RotateCW from 'lucide-svelte/icons/rotate-cw';
@@ -30,7 +29,7 @@
 		TableItem,
 		TableSearchSettings
 	} from '../types/index.js';
-	import { InfinitableRunMode, setInfiniteTableContext } from './context.js';
+	import { setInfiniteTableContext } from './context.js';
 	import InfiniteTableRow from './infinitable-row.svelte';
 	import InfiniteTableSearch from './infinitable-search.svelte';
 	import { createTickingRelativeTime, searchSettingsToFilter } from './utils.svelte.js';
@@ -105,6 +104,13 @@
 		 * @default ''
 		 */
 		class?: string;
+		/**
+		 * If set to `true`, buttons will be rendered that make it easy to switch
+		 * between different states of the table.
+		 *
+		 * @default false
+		 */
+		debug?: boolean;
 
 		/*******
 		 * Events
@@ -168,6 +174,7 @@
 		rowDisabler = undefined,
 		disabledRowMessage = undefined,
 		ignoreInfinite = false,
+		debug = false,
 		// Events
 		onRefresh = undefined,
 		onInfinite = undefined,
@@ -661,7 +668,7 @@
 	};
 </script>
 
-{#if PUBLIC_INFINITABLE_MODE === InfinitableRunMode.DEBUG}
+{#if debug}
 	<div class="mb-4 flex flex-wrap items-center justify-center gap-4">
 		<Button
 			size="sm"

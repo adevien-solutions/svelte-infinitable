@@ -39,6 +39,7 @@ npm i -D svelte-infinitable
 | `rowDisabler`        | `(item: TableItem, index: number) => boolean` | `undefined`                     | Yes      | A function that takes an item and an index as parameters, and returns a boolean indicating whether the row at that index should be disabled or not.                                                                                                      |
 | `disabledRowMessage` | `string`                                      | `'This row cannot be selected'` | Yes      | The text that will be displayed when the checkbox of a disabled row is hovered.                                                                                                                                                                          |
 | `class`              | `string`                                      | `''`                            | Yes      | Classes to apply to the table wrapper element.                                                                                                                                                                                                           |
+| `debug`              | `boolean`                                     | `false`                         | Yes      | If set to `true`, buttons will be rendered that make it easy to switch between different states of the table.                                                                                                                                            |
 
 ### Events
 
@@ -97,7 +98,7 @@ If you want to see a more complex one, check
 		} catch (e) {
 			error();
 		}
-	}
+	};
 </script>
 
 <Infinitable.Root bind:items rowHeight={36} {onInfinite} class="max-h-[400px]">

@@ -135,6 +135,7 @@
 	onSort={searchFilterSortHandler}
 	{onSelect}
 	class="h-[60vh] min-h-[400px]"
+	debug
 >
 	{#snippet actionsStart()}
 		<Button variant="ghost" onclick={() => alert('Mock action')} disabled={cancelDisabled}>
