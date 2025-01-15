@@ -17,4 +17,4 @@ jobs:
             - recursive: true
               args: [--frozen-lockfile, --strict-peer-dependencies]
       - run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
-      - run: pnpm publish --access public
+      - run: pnpm publish --no-git-checks --access public
