@@ -220,7 +220,7 @@
 	let filterable = $state(false);
 	let allFiltersDefault = $state(true);
 	let isAllSelectorChecked = $state(false);
-	let rowCount = $state(0);
+	let rowCount = $derived(internalItems.length);
 	let selectedCount = $state(0);
 	let searchValue = $state('');
 	let sorting = writable<InternalSortDetail | undefined>(undefined);
@@ -535,7 +535,6 @@
 	export function applyFilteringAndOrdering() {
 		// Filtering
 		filterItems();
-		rowCount = internalItems.length;
 
 		// Sorting
 		sortItems();
@@ -708,57 +707,58 @@
 		</Button>
 	</div>
 {/if}
-<div class={twMerge('flex flex-col text-sm', c)}>
-	<div
-		bind:this={actionRowElement}
-		class="flex flex-wrap items-center justify-start gap-4
-		rounded-t-md border !border-b-0 bg-gray-50 px-2 py-2"
-	>
-		{#if search}
-			<div class="grow">
-				<InfiniteTableSearch bind:value={searchValue} settings={search} onSearch={onSearchChange} />
+<div class={twMerge('flex flex-col overflow-hidden rounded-md border text-sm', c)}>
+	{#if search || refreshable || filterable || actionsStart || actionsEnd}
+		<div
+			bind:this={actionRowElement}
+			class="flex flex-wrap items-center justify-start gap-4 border-b bg-gray-50 px-2 py-2"
+		>
+			{#if search}
+				<div class="grow">
+					<InfiniteTableSearch
+						bind:value={searchValue}
+						settings={search}
+						onSearch={onSearchChange}
+					/>
+				</div>
+			{/if}
+			<div class="flex flex-wrap items-center justify-start gap-1">
+				{@render actionsStart?.({ wrapper: actionRowElement })}
+				{#if refreshable}
+					<Tooltip.Provider delayDuration={200}>
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props })}
+									<Button
+										{...props}
+										variant="ghost"
+										onclick={refresh}
+										disabled={internalState === 'loading'}
+									>
+										<RotateCW size={16} class={internalState === 'loading' ? 'animate-spin' : ''} />
+										<span> Refresh </span>
+									</Button>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content class="font-normal">
+								<p>
+									Refreshed {lastRefresh?.value}
+								</p>
+							</Tooltip.Content>
+						</Tooltip.Root>
+					</Tooltip.Provider>
+				{/if}
+				{#if filterable}
+					<Button variant="ghost" onclick={clearFilters} disabled={allFiltersDefault}>
+						<X size={16} />
+						<span>Clear filters</span>
+					</Button>
+				{/if}
+				{@render actionsEnd?.({ wrapper: actionRowElement })}
 			</div>
-		{/if}
-		<div class="flex flex-wrap items-center justify-start gap-1">
-			{@render actionsStart?.({ wrapper: actionRowElement })}
-			{#if refreshable}
-				<Tooltip.Provider delayDuration={200}>
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							{#snippet child({ props })}
-								<Button
-									{...props}
-									variant="ghost"
-									onclick={refresh}
-									disabled={internalState === 'loading'}
-								>
-									<RotateCW size={16} class={internalState === 'loading' ? 'animate-spin' : ''} />
-									<span> Refresh </span>
-								</Button>
-							{/snippet}
-						</Tooltip.Trigger>
-						<Tooltip.Content class="font-normal">
-							<p>
-								Refreshed {lastRefresh?.value}
-							</p>
-						</Tooltip.Content>
-					</Tooltip.Root>
-				</Tooltip.Provider>
-			{/if}
-			{#if filterable}
-				<Button variant="ghost" onclick={clearFilters} disabled={allFiltersDefault}>
-					<X size={16} />
-					<span>Clear filters</span>
-				</Button>
-			{/if}
-			{@render actionsEnd?.({ wrapper: actionRowElement })}
 		</div>
-	</div>
-	<div
-		bind:this={viewportElement}
-		onscroll={onScroll}
-		class="relative h-full overflow-auto rounded-b-md border"
-	>
+	{/if}
+	<div bind:this={viewportElement} onscroll={onScroll} class="relative h-full overflow-auto">
 		<table bind:this={$tableElement} class="w-full table-fixed border-spacing-2 text-slate-700">
 			<thead bind:clientHeight={headerHeight} class="sticky left-0 top-0 z-10 w-full bg-white">
 				<InfiniteTableRow
@@ -880,20 +880,20 @@
 			</div>
 		{/if}
 	</div>
-	{#if rowsDetail}
-		{@render rowsDetail?.({ rowCount, selectedCount })}
-	{:else}
-		<p class="my-1 text-sm text-gray-500">
-			{rowCount} row{rowCount === 1 ? '' : 's'} shown, {selectedCount} selected
-		</p>
-	{/if}
-	{#if errorMessage}
-		{#if error}
-			{@render error?.({ message: errorMessage })}
-		{:else}
-			<div class="text-red-700">
-				{errorMessage}
-			</div>
-		{/if}
-	{/if}
 </div>
+{#if rowsDetail}
+	{@render rowsDetail?.({ rowCount, selectedCount })}
+{:else}
+	<p class="my-1 text-sm text-gray-500">
+		{rowCount} row{rowCount === 1 ? '' : 's'} shown{#if selectable}, {selectedCount} selected{/if}
+	</p>
+{/if}
+{#if errorMessage}
+	{#if error}
+		{@render error?.({ message: errorMessage })}
+	{:else}
+		<div class="text-red-700">
+			{errorMessage}
+		</div>
+	{/if}
+{/if}
