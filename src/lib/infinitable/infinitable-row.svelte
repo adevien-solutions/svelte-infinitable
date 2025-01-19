@@ -54,7 +54,7 @@
 {#if !hidden}
 	<tr
 		class={twMerge(
-			'duration-100',
+			'relative duration-100',
 			'[&>th]:py-2 [&>th]:pl-2 last:[&>th]:pr-2',
 			'[&>td]:py-1 [&>td]:pl-2 last:[&>td]:pr-2',
 			header

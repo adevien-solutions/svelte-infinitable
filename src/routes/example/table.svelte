@@ -95,7 +95,7 @@
 	const onRefresh: RefreshHandler = async ({ loaded, completed, error }) => {
 		try {
 			page = 1;
-			const { data, depleted } = await loadItems(true);
+			const { data, depleted } = await loadItems();
 			depleted ? completed(data) : loaded(data);
 		} catch (e) {
 			error();
@@ -123,25 +123,32 @@
 	bind:this={table}
 	bind:items
 	rowHeight={36}
-	refreshable
 	selectable
-	search={{ mode: 'server', placeholder: 'Search tasks' }}
 	rowDisabler={({ state }) => isFinishedTaskState(state)}
 	disabledRowMessage="Task is already finished"
-	{onRefresh}
 	{onInfinite}
-	onSearch={searchFilterSortHandler}
 	onFilter={searchFilterSortHandler}
 	onSort={searchFilterSortHandler}
 	{onSelect}
 	class="h-[60vh] min-h-[400px]"
 	debug
 >
-	{#snippet actionsStart()}
-		<Button variant="ghost" onclick={() => alert('Mock action')} disabled={cancelDisabled}>
-			<Trash size={16} />
-			<span> Cancel tasks </span>
-		</Button>
+	{#snippet actions()}
+		<Infinitable.ActionRow>
+			<div class="grow">
+				<Infinitable.Search
+					settings={{ mode: 'server' }}
+					onSearch={searchFilterSortHandler}
+					placeholder="Search tasks"
+				/>
+			</div>
+			<Button variant="ghost" onclick={() => alert('Mock action')} disabled={cancelDisabled}>
+				<Trash size={16} />
+				<span> Cancel tasks </span>
+			</Button>
+			<Infinitable.Refresh {onRefresh} />
+			<Infinitable.FilterClear />
+		</Infinitable.ActionRow>
 	{/snippet}
 
 	{#snippet headers()}

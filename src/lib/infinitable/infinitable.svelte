@@ -1,15 +1,12 @@
 <script lang="ts">
 	import Check from 'lucide-svelte/icons/check';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
-	import RotateCW from 'lucide-svelte/icons/rotate-cw';
 	import Search from 'lucide-svelte/icons/search';
 	import TriangleAlert from 'lucide-svelte/icons/triangle-alert';
-	import X from 'lucide-svelte/icons/x';
 	import { onMount, tick, untrack, type Snippet } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { twMerge } from 'tailwind-merge';
 	import { Button } from '../components/ui/button/index.js';
-	import * as Tooltip from '../components/ui/tooltip/index.js';
 	import type {
 		FilterDetailItem,
 		FilterHandler,
@@ -29,10 +26,9 @@
 		TableItem,
 		TableSearchSettings
 	} from '../types/index.js';
-	import { setInfiniteTableContext } from './context.js';
+	import { setInfiniteTableContext, type InfiniteTableState } from './context.js';
 	import InfiniteTableRow from './infinitable-row.svelte';
-	import InfiniteTableSearch from './infinitable-search.svelte';
-	import { createTickingRelativeTime, searchSettingsToFilter } from './utils.svelte.js';
+	import { searchSettingsToFilter } from './utils.svelte.js';
 
 	type Props = {
 		/**
@@ -53,18 +49,6 @@
 		 * @default false
 		 */
 		selectable?: boolean;
-		/**
-		 * Controls whether the table has a refresh button or not.
-		 *
-		 * @default false
-		 */
-		refreshable?: boolean;
-		/**
-		 * Controls whether the table has a search bar or not.
-		 *
-		 * @default undefined
-		 */
-		search?: TableSearchSettings;
 		/**
 		 * The number of rows to render above and below the visible area of the table.
 		 * Also controls how early the table will call the `onInfinite` function.
@@ -118,10 +102,6 @@
 
 		/** Called when the table has reached the end of the loaded data. */
 		onInfinite?: InfiniteHandler | undefined;
-		/** Called when the user clicks the refresh button. */
-		onRefresh?: RefreshHandler | undefined;
-		/** Called when the user types in the search input, and it's in `server` mode. */
-		onSearch?: SearchHandler | undefined;
 		/** Called when the filtering of the table changes, and it's in `server` mode. */
 		onFilter?: FilterHandler | undefined;
 		/** Called when the sorting of the table changes, and it's in `server` mode. */
@@ -137,10 +117,11 @@
 		children?: Snippet<
 			[{ item: TableItem; index: number; selectedCount: number; isAllSelected: boolean }]
 		>;
-		/** A slot at the start of the actions section. */
-		actionsStart?: Snippet<[{ wrapper: HTMLElement }]>;
-		/** A slot at the end of the actions section. */
-		actionsEnd?: Snippet<[{ wrapper: HTMLElement }]>;
+		/**
+		 * A slot above the table, but within it's border.
+		 * It's the recommended place to mount the `Search`, `Refresh`, `FilterClear`, and any other extra components.
+		 */
+		actions?: Snippet;
 		/** A slot for the table headers. */
 		headers?: Snippet;
 		/** A slot to replace the loading indicator below existing rows. */
@@ -167,8 +148,6 @@
 		items = $bindable([]),
 		rowHeight,
 		selectable = false,
-		refreshable = false,
-		search = undefined,
 		overscan = 10,
 		class: c = '',
 		rowDisabler = undefined,
@@ -176,16 +155,13 @@
 		ignoreInfinite = false,
 		debug = false,
 		// Events
-		onRefresh = undefined,
 		onInfinite = undefined,
-		onSearch = undefined,
 		onFilter = undefined,
 		onSort = undefined,
 		onSelect = undefined,
 		// Slots
 		children,
-		actionsStart,
-		actionsEnd,
+		actions,
 		headers,
 		loader,
 		completed,
@@ -199,6 +175,7 @@
 	}: Props = $props();
 
 	const filterIsDefault = new Map<TableFilterHeader, boolean>();
+	const refreshReset = new Set<() => void>();
 	const selected = new Set<TableItem>();
 	const allSelected = writable(false);
 	const resetFlag = writable(false);
@@ -214,23 +191,62 @@
 
 	let internalItems = $state<{ data: TableItem; index: number }[]>([]);
 	let viewportElement = $state<HTMLElement>();
-	let actionRowElement = $state<HTMLElement>();
 	let headerHeight = $state(0);
 	let tableBodyElement = $state<HTMLTableSectionElement>();
 	let filterable = $state(false);
-	let allFiltersDefault = $state(true);
+	let allFiltersDefault = writable(true);
 	let isAllSelectorChecked = $state(false);
 	let rowCount = $derived(internalItems.length);
 	let selectedCount = $state(0);
-	let searchValue = $state('');
+	let search = $state<{ value: string; settings: TableSearchSettings } | undefined>();
 	let sorting = writable<InternalSortDetail | undefined>(undefined);
 	let errorMessage = $state('');
-	let internalState = $state<'idle' | 'loading' | 'completed' | 'error'>('idle');
-	let lastRefresh = $state<ReturnType<typeof createTickingRelativeTime>>();
+	let internalState = writable<InfiniteTableState>('idle');
 	let isInitialLoad = $state(ignoreInfinite);
 	let isMounted = $state(false);
 
+	////////////////////////////////////////
+	// Functions passed to event handlers //
+	////////////////////////////////////////
+
+	const infiniteDetail: InfiniteDetail = {
+		loaded: (newItems: TableItem[]) => {
+			$internalState = 'idle';
+			errorMessage = '';
+			items = [...items, ...newItems];
+		},
+		completed: (newItems: TableItem[]) => {
+			$internalState = 'completed';
+			errorMessage = '';
+			items = [...items, ...newItems];
+		},
+		error: (message?: string) => {
+			$internalState = 'error';
+			errorMessage = message ?? 'An error occurred while loading items';
+		}
+	};
+
+	const refreshDetail: RefreshDetail = {
+		loaded: (i: TableItem[]) => {
+			$internalState = 'idle';
+			errorMessage = '';
+			items = [...i];
+		},
+		completed: (i: TableItem[]) => {
+			$internalState = 'completed';
+			errorMessage = '';
+			items = [...i];
+		},
+		error: (message?: string) => {
+			$internalState = 'error';
+			errorMessage = message ?? 'An error occurred while loading items';
+		}
+	};
+
 	setInfiniteTableContext({
+		state: {
+			subscribe: internalState.subscribe
+		},
 		element: {
 			table: { subscribe: tableElement.subscribe }
 		},
@@ -243,6 +259,15 @@
 		onFilterDestroy,
 		onFilterChange,
 		onSortChange,
+		refresh,
+		onRefreshMount,
+		onRefreshDestroy,
+		allFiltersDefault: {
+			subscribe: allFiltersDefault.subscribe
+		},
+		clearFilters,
+		onSearchChange,
+		onSearchDestroy,
 		resetFlag: { subscribe: resetFlag.subscribe }
 	});
 
@@ -250,7 +275,7 @@
 		items;
 		if (isMounted) {
 			untrack(() => {
-				resetLastRefresh();
+				resetRefreshButtons();
 				applyFilteringAndOrdering();
 			});
 		}
@@ -266,24 +291,31 @@
 
 	onMount(() => {
 		isMounted = true;
-
-		return () => {
-			lastRefresh?.cancel();
-		};
 	});
 
 	function resetInternalItems() {
 		internalItems = items.map((data, index) => ({ data, index }));
 	}
 
-	async function onSearchChange(value: string) {
-		searchValue = value;
-		if (search?.mode === 'server') {
-			internalState = 'loading';
-			await onSearch?.(refreshEventHandlers, { value });
+	async function onSearchChange(
+		value: string,
+		settings: TableSearchSettings,
+		handler?: SearchHandler
+	) {
+		search = {
+			value,
+			settings
+		};
+		if (settings.mode === 'server') {
+			$internalState = 'loading';
+			await handler?.(refreshDetail, { value });
 			return;
 		}
 		applyFilteringAndOrdering();
+	}
+
+	function onSearchDestroy() {
+		search = undefined;
 	}
 
 	function onFilterMount(filterHeader: TableFilterHeader) {
@@ -294,13 +326,13 @@
 	function onFilterDestroy(filterHeader: TableFilterHeader) {
 		filterIsDefault.delete(filterHeader);
 		filterable = filterIsDefault.size > 0;
-		allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
+		$allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
 		applyFilteringAndOrdering();
 	}
 
 	function onFilterChange(detail: FilterDetailItem, isUserReset: boolean) {
 		filterIsDefault.set(detail.header, detail.isDefault);
-		allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
+		$allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
 
 		// Calling a server through the provided event handler
 		if (detail.header.filter.mode === 'server') {
@@ -312,7 +344,7 @@
 				header,
 				isDefault
 			}));
-			return onFilter(refreshEventHandlers, { current: detail, all });
+			return onFilter(refreshDetail, { current: detail, all });
 		}
 
 		// Handling on the client side
@@ -331,13 +363,21 @@
 			}
 
 			const { id, ...sortDetail } = detail;
-			return onSort(refreshEventHandlers, sortDetail);
+			return onSort(refreshDetail, sortDetail);
 		}
 
 		// Handling on the client side
 		if (detail.header.sort.mode === 'auto') {
 			sortItems();
 		}
+	}
+
+	function onRefreshMount(resetFunction: () => void) {
+		refreshReset.add(resetFunction);
+	}
+
+	function onRefreshDestroy(resetFunction: () => void) {
+		refreshReset.delete(resetFunction);
 	}
 
 	function filterItems() {
@@ -354,9 +394,11 @@
 		);
 
 		// Converting the search to a filter, so it can be applied in one loop with the other filters.
-		const searchFilter = searchSettingsToFilter(search, searchValue);
-		if (searchFilter) {
-			filters.unshift(searchFilter);
+		if (search) {
+			const searchFilter = searchSettingsToFilter(search.settings, search.value);
+			if (searchFilter) {
+				filters.unshift(searchFilter);
+			}
 		}
 
 		internalItems = internalItems.filter(({ data, index }) => {
@@ -423,15 +465,14 @@
 		internalItems = internalItems;
 	}
 
-	function resetLastRefresh() {
-		lastRefresh?.cancel();
-		lastRefresh = createTickingRelativeTime(new Date());
+	function resetRefreshButtons() {
+		refreshReset.forEach((reset) => reset());
 	}
 
-	function refresh() {
-		internalState = 'loading';
-		resetLastRefresh();
-		onRefresh?.(refreshEventHandlers);
+	async function refresh(handler?: RefreshHandler) {
+		$internalState = 'loading';
+		await handler?.(refreshDetail);
+		resetRefreshButtons();
 		selected.clear();
 		updateSelect();
 		tableBodyElement?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -509,10 +550,10 @@
 			}
 		}
 
-		if (end === rowCount && internalState === 'idle' && !ignoreInfinite) {
+		if (end === rowCount && $internalState === 'idle' && !ignoreInfinite) {
 			// The table has reached the end of the data.
-			internalState = 'loading';
-			onInfinite?.(infiniteEventHandlers);
+			$internalState = 'loading';
+			onInfinite?.(infiniteDetail);
 		}
 	}
 
@@ -566,22 +607,22 @@
 		filters: FilterDetailItem<T[number]>[] | undefined;
 		sort: SortDetail<T[number]> | undefined;
 	} {
-		let search: SearchDetail | undefined;
-		let filters: FilterDetailItem<T[number]>[] | undefined;
-		let sort: SortDetail<T[number]> | undefined;
+		let searchDetail: SearchDetail | undefined;
+		let filtersDetail: FilterDetailItem<T[number]>[] | undefined;
+		let sortDetail: SortDetail<T[number]> | undefined;
 
-		if (searchValue) {
-			search = { value: searchValue };
+		if (search?.value) {
+			searchDetail = { value: search.value };
 		}
 
 		if ($sorting) {
 			const { id, ...sortingDetails } = $sorting;
-			sort = sortingDetails;
+			sortDetail = sortingDetails;
 		}
 
 		const filterEntries = [...filterIsDefault.entries()];
 		if (filterEntries.length > 0) {
-			filters = [...filterEntries].map(
+			filtersDetail = [...filterEntries].map(
 				([header, isDefault]) =>
 					({
 						header,
@@ -591,9 +632,9 @@
 		}
 
 		return {
-			search,
-			filters,
-			sort
+			search: searchDetail,
+			filters: filtersDetail,
+			sort: sortDetail
 		};
 	}
 
@@ -613,10 +654,10 @@
 		errorMessage = error?.toString() ?? '';
 
 		if (errorMessage) {
-			internalState = 'error';
-		} else if (internalState === 'error') {
+			$internalState = 'error';
+		} else if ($internalState === 'error') {
 			// `completed` and `loading` states shouldn't be overwritten when the error is cleared.
-			internalState = 'idle';
+			$internalState = 'idle';
 		}
 	}
 
@@ -627,44 +668,6 @@
 	export function finishInitialLoad(): void {
 		isInitialLoad = false;
 	}
-
-	/////////////////////////////////////////////
-	// Functions passed to the "infinte" event //
-	/////////////////////////////////////////////
-
-	const infiniteEventHandlers: InfiniteDetail = {
-		loaded: (newItems: TableItem[]) => {
-			internalState = 'idle';
-			errorMessage = '';
-			items = [...items, ...newItems];
-		},
-		completed: (newItems: TableItem[]) => {
-			internalState = 'completed';
-			errorMessage = '';
-			items = [...items, ...newItems];
-		},
-		error: (message?: string) => {
-			internalState = 'error';
-			errorMessage = message ?? 'An error occurred while loading items';
-		}
-	};
-
-	const refreshEventHandlers: RefreshDetail = {
-		loaded: (i: TableItem[]) => {
-			internalState = 'idle';
-			errorMessage = '';
-			items = [...i];
-		},
-		completed: (i: TableItem[]) => {
-			internalState = 'completed';
-			errorMessage = '';
-			items = [...i];
-		},
-		error: (message?: string) => {
-			internalState = 'error';
-			errorMessage = message ?? 'An error occurred while loading items';
-		}
-	};
 </script>
 
 {#if debug}
@@ -672,7 +675,7 @@
 		<Button
 			size="sm"
 			onclick={() => {
-				internalState = 'loading';
+				$internalState = 'loading';
 				items = [];
 			}}
 		>
@@ -681,7 +684,7 @@
 		<Button
 			size="sm"
 			onclick={() => {
-				internalState = 'completed';
+				$internalState = 'completed';
 				items = [];
 			}}
 		>
@@ -690,7 +693,7 @@
 		<Button
 			size="sm"
 			onclick={() => {
-				internalState = 'error';
+				$internalState = 'error';
 				items = [];
 			}}
 		>
@@ -699,7 +702,7 @@
 		<Button
 			size="sm"
 			onclick={() => {
-				internalState = 'idle';
+				$internalState = 'idle';
 				items = [];
 			}}
 		>
@@ -708,56 +711,7 @@
 	</div>
 {/if}
 <div class={twMerge('flex flex-col overflow-hidden rounded-md border text-sm', c)}>
-	{#if search || refreshable || filterable || actionsStart || actionsEnd}
-		<div
-			bind:this={actionRowElement}
-			class="flex flex-wrap items-center justify-start gap-4 border-b bg-gray-50 px-2 py-2"
-		>
-			{#if search}
-				<div class="grow">
-					<InfiniteTableSearch
-						bind:value={searchValue}
-						settings={search}
-						onSearch={onSearchChange}
-					/>
-				</div>
-			{/if}
-			<div class="flex flex-wrap items-center justify-start gap-1">
-				{@render actionsStart?.({ wrapper: actionRowElement })}
-				{#if refreshable}
-					<Tooltip.Provider delayDuration={200}>
-						<Tooltip.Root>
-							<Tooltip.Trigger>
-								{#snippet child({ props })}
-									<Button
-										{...props}
-										variant="ghost"
-										onclick={refresh}
-										disabled={internalState === 'loading'}
-									>
-										<RotateCW size={16} class={internalState === 'loading' ? 'animate-spin' : ''} />
-										<span> Refresh </span>
-									</Button>
-								{/snippet}
-							</Tooltip.Trigger>
-							<Tooltip.Content class="font-normal">
-								<p>
-									Refreshed {lastRefresh?.value}
-								</p>
-							</Tooltip.Content>
-						</Tooltip.Root>
-					</Tooltip.Provider>
-				{/if}
-				{#if filterable}
-					<Button variant="ghost" onclick={clearFilters} disabled={allFiltersDefault}>
-						<X size={16} />
-						<span>Clear filters</span>
-					</Button>
-				{/if}
-				{@render actionsEnd?.({ wrapper: actionRowElement })}
-			</div>
-		</div>
-	{/if}
+	{@render actions?.()}
 	<div bind:this={viewportElement} onscroll={onScroll} class="relative h-full overflow-auto">
 		<table bind:this={$tableElement} class="w-full table-fixed border-spacing-2 text-slate-700">
 			<thead bind:clientHeight={headerHeight} class="sticky left-0 top-0 z-10 w-full bg-white">
@@ -795,7 +749,7 @@
 					{#if position === internalItems.length - 1}
 						<tr>
 							<td colspan={viewportElement?.querySelectorAll('th')?.length || 1}>
-								{#if internalState === 'loading'}
+								{#if $internalState === 'loading'}
 									{#if loader}
 										{@render loader?.()}
 									{:else}
@@ -807,7 +761,7 @@
 										</div>
 									{/if}
 								{/if}
-								{#if internalState === 'completed'}
+								{#if $internalState === 'completed'}
 									{#if completed}
 										{@render completed?.()}
 									{:else}
@@ -844,7 +798,7 @@
 				justify-center gap-2 text-center text-gray-600"
 				style="height: calc(100% - {headerHeight}px);"
 			>
-				{#if internalState === 'loading' || isInitialLoad || !isMounted}
+				{#if $internalState === 'loading' || isInitialLoad || !isMounted}
 					<!-- Table is loading it's initial items -->
 					{#if loadingEmpty}
 						{@render loadingEmpty?.()}
@@ -852,7 +806,7 @@
 						<LoaderCircle size={32} class="animate-spin" />
 						<p class="text-center font-medium">Loading</p>
 					{/if}
-				{:else if internalState === 'completed'}
+				{:else if $internalState === 'completed'}
 					<!-- Table is completed and empty -->
 					{#if completedEmpty}
 						{@render completedEmpty?.()}
@@ -860,7 +814,7 @@
 						<Check size={32} />
 						<p class="text-center font-medium">No items to display</p>
 					{/if}
-				{:else if internalState === 'error'}
+				{:else if $internalState === 'error'}
 					<!-- Table has an error and empty -->
 					{#if errorEmpty}
 						{@render errorEmpty?.()}

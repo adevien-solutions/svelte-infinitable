@@ -12,20 +12,7 @@ type TableSearchMode<T extends 'server' | 'auto' | 'custom'> = {
 	mode: T;
 };
 
-export type TableSearchSettings = {
-	/**
-	 * The placeholder text of the search input.
-	 *
-	 * @default 'Search'
-	 */
-	placeholder?: string;
-	/**
-	 * The amount of milliseconds to wait after the user's last keystroke.
-	 *
-	 * @default 500
-	 */
-	debounceDelay?: number;
-} & (
+export type TableSearchSettings =
 	| TableSearchMode<'server'>
 	| (TableSearchMode<'auto'> & {
 			/**
@@ -54,5 +41,4 @@ export type TableSearchSettings = {
 			 * @returns `true` if the item should be shown, `false` if it should be filtered out.
 			 */
 			onSearch: CustomFiltering;
-	  })
-);
+	  });

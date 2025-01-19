@@ -5,6 +5,7 @@ import type {
 	TableSearchSettings,
 	TextFilter
 } from '../types/index.js';
+import type { LastRefreshDetail, RefreshLabelUpdateTickRate } from '../types/refresh.js';
 
 export function debounce<T extends (...args: unknown[]) => unknown>(fn: T, delay: number) {
 	let timeout: NodeJS.Timeout | undefined;
@@ -86,9 +87,10 @@ export function formatRelativeTime(date: Date): string {
 
 export function createTickingRelativeTime(
 	date: Date,
-	tickRate: 'second' | 'minute' = 'minute'
-): { value: string; cancel: () => void } {
-	const ticker = $state({
+	tickRate: RefreshLabelUpdateTickRate = 'minute'
+): LastRefreshDetail {
+	const ticker = $state<LastRefreshDetail>({
+		refreshedAt: date,
 		value: formatRelativeTime(date),
 		cancel: () => {}
 	});
