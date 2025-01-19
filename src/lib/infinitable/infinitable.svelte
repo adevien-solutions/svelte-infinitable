@@ -89,6 +89,12 @@
 		 */
 		class?: string;
 		/**
+		 * Style to apply to the table wrapper element.
+		 *
+		 * @default ''
+		 */
+		style?: string;
+		/**
 		 * If set to `true`, buttons will be rendered that make it easy to switch
 		 * between different states of the table.
 		 *
@@ -149,10 +155,11 @@
 		rowHeight,
 		selectable = false,
 		overscan = 10,
-		class: c = '',
 		rowDisabler = undefined,
 		disabledRowMessage = undefined,
 		ignoreInfinite = false,
+		class: c = '',
+		style = '',
 		debug = false,
 		// Events
 		onInfinite = undefined,
@@ -710,7 +717,7 @@
 		</Button>
 	</div>
 {/if}
-<div class={twMerge('flex flex-col overflow-hidden rounded-md border text-sm', c)}>
+<div class={twMerge('flex flex-col overflow-hidden rounded-md border text-sm', c)} {style}>
 	{@render actions?.()}
 	<div bind:this={viewportElement} onscroll={onScroll} class="relative h-full overflow-auto">
 		<table bind:this={$tableElement} class="w-full table-fixed border-spacing-2 text-slate-700">
