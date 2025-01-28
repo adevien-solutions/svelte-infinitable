@@ -8,11 +8,9 @@
 	type Props = {
 		header?: boolean;
 		selected?: boolean;
-		class?: string;
 		disabled?: boolean;
-		/** Controls whether the HTML of the component is rendered or not. */
-		hidden?: boolean;
 		disabledMessage?: string;
+		class?: string;
 		onChange?: (selected: boolean) => void;
 		children?: () => any;
 		[key: string]: any;
@@ -21,10 +19,9 @@
 	let {
 		header = false,
 		selected = false,
-		class: c = '',
 		disabled = false,
-		hidden = false,
 		disabledMessage = 'This row cannot be selected',
+		class: c = '',
 		onChange = () => {},
 		children,
 		...rest
@@ -33,9 +30,8 @@
 	const { selectable, allSelected } = getInfiniteTableContext();
 
 	$effect(() => {
-		if (!header && !hidden) {
-			selected = $allSelected;
-		}
+		if (disabled) return;
+		selected = $allSelected;
 	});
 
 	onMount(() => {
@@ -51,28 +47,28 @@
 	}
 </script>
 
-{#if !hidden}
-	<tr
-		class={twMerge(
-			'relative duration-100',
-			'[&>th]:py-2 [&>th]:pl-2 last:[&>th]:pr-2',
-			'[&>td]:py-1 [&>td]:pl-2 last:[&>td]:pr-2',
-			header
-				? ''
-				: selected
-					? 'bg-blue-50 hover:bg-blue-100/80 focus-visible:bg-blue-100/80'
-					: 'hover:bg-gray-100 focus-visible:bg-gray-100',
-			c
-		)}
-		{...rest}
-	>
-		{#if selectable}
-			<svelte:element this={header ? 'th' : 'td'} class="w-[25px]">
-				{#if disabled && disabledMessage}
+<tr
+	class={twMerge(
+		'relative duration-100',
+		'[&>th]:py-2 [&>th]:pl-2 last:[&>th]:pr-2',
+		'[&>td]:py-1 [&>td]:pl-2 last:[&>td]:pr-2',
+		header
+			? ''
+			: selected
+				? 'bg-blue-50 hover:bg-blue-100/80 focus-visible:bg-blue-100/80'
+				: 'hover:bg-gray-100 focus-visible:bg-gray-100',
+		c
+	)}
+	{...rest}
+>
+	{#if selectable}
+		<svelte:element this={header ? 'th' : 'td'} class="w-[25px]">
+			{#if disabled}
+				{#if disabledMessage}
 					<Tooltip.Provider delayDuration={200}>
 						<Tooltip.Root>
 							<Tooltip.Trigger>
-								<Checkbox checked={selected} disabled={true} class={header ? 'mt-1' : 'mt-0.5'} />
+								{@render disabledCheckbox()}
 							</Tooltip.Trigger>
 							<Tooltip.Content class="font-normal" side="right">
 								<p>{disabledMessage}</p>
@@ -80,15 +76,21 @@
 						</Tooltip.Root>
 					</Tooltip.Provider>
 				{:else}
-					<Checkbox
-						bind:checked={selected}
-						onclick={onClick}
-						{disabled}
-						class={header ? 'mt-1' : 'mt-0.5'}
-					/>
+					{@render disabledCheckbox()}
 				{/if}
-			</svelte:element>
-		{/if}
-		{@render children?.()}
-	</tr>
-{/if}
+			{:else}
+				<Checkbox
+					bind:checked={selected}
+					onclick={onClick}
+					{disabled}
+					class={header ? 'mt-1' : 'mt-0.5'}
+				/>
+			{/if}
+		</svelte:element>
+	{/if}
+	{@render children?.()}
+</tr>
+
+{#snippet disabledCheckbox()}
+	<Checkbox checked={selected} disabled={true} class={header ? 'mt-1' : 'mt-0.5'} />
+{/snippet}
