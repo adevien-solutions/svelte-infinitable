@@ -4,6 +4,7 @@
 	import { Button, type ButtonSize, type ButtonVariant } from '../components/ui/button/index.js';
 	import * as Tooltip from '../components/ui/tooltip/index.js';
 	import type { RefreshHandler } from '../types/handlers.js';
+	import type { LastRefreshDetail } from '../types/refresh.js';
 	import { getInfiniteTableContext } from './context.js';
 	import { createTickingRelativeTime } from './utils.svelte.js';
 
@@ -15,7 +16,8 @@
 
 		onRefresh?: RefreshHandler;
 
-		children?: Snippet;
+		children?: Snippet<[{ loading: boolean }]>;
+		tooltip?: Snippet<[LastRefreshDetail]>;
 	};
 
 	let {
@@ -24,7 +26,8 @@
 		disabled = false,
 		class: c = '',
 		onRefresh,
-		children
+		children,
+		tooltip
 	}: Props = $props();
 
 	const {
@@ -33,7 +36,7 @@
 		onRefreshMount,
 		onRefreshDestroy
 	} = getInfiniteTableContext();
-	let lastRefresh = $state<ReturnType<typeof createTickingRelativeTime>>();
+	let lastRefresh = $state(createTickingRelativeTime(new Date()));
 
 	onMount(() => {
 		onRefreshMount(resetLastRefresh);
@@ -67,7 +70,7 @@
 					disabled={disabled || $internalState === 'loading'}
 				>
 					{#if children}
-						{@render children()}
+						{@render children({ loading: $internalState === 'loading' })}
 					{:else}
 						<RotateCW size={16} class={$internalState === 'loading' ? 'animate-spin' : ''} />
 						<span> Refresh </span>
@@ -76,9 +79,13 @@
 			{/snippet}
 		</Tooltip.Trigger>
 		<Tooltip.Content class="font-normal">
-			<p>
-				Refreshed {lastRefresh?.value}
-			</p>
+			{#if tooltip}
+				{@render tooltip(lastRefresh)}
+			{:else}
+				<p>
+					Refreshed {lastRefresh?.value}
+				</p>
+			{/if}
 		</Tooltip.Content>
 	</Tooltip.Root>
 </Tooltip.Provider>
