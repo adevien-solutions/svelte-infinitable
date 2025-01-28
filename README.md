@@ -25,6 +25,9 @@ npm i -D svelte-infinitable
 
 ## Usage
 
+> [!WARNING]
+> The package is yet to reach version 1.0.0, meaning breaking changes may be introduced with every minor version.
+
 ### Props
 
 | Name                 | Type                                          | Default                         | Optional | Description                                                                                                                                                                                                                                              |
