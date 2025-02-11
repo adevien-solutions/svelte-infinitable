@@ -23,7 +23,9 @@ export type InfiniteTableContext = {
 	};
 	/** Controls whether the table rows are selectable or not. */
 	selectable: boolean;
-	allSelected: Readable<boolean>;
+	selectedCount: () => number;
+	rowCount: () => number;
+	isAllSelected: () => boolean;
 	sorting: Readable<InternalSortDetail | undefined>;
 	onFilterMount: (filterHeader: TableFilterHeader) => void;
 	onFilterChange: (detail: FilterDetailItem, isUserReset: boolean) => void;

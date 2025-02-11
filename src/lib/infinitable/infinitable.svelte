@@ -127,7 +127,7 @@
 		 * A slot above the table, but within it's border.
 		 * It's the recommended place to mount the `Search`, `Refresh`, `FilterClear`, and any other extra components.
 		 */
-		actions?: Snippet;
+		actions?: Snippet<[{ selectedCount: number }]>;
 		/** A slot for the table headers. */
 		headers?: Snippet;
 		/** A slot to replace the loading indicator below existing rows. */
@@ -183,8 +183,7 @@
 
 	const filterIsDefault = new Map<TableFilterHeader, boolean>();
 	const refreshReset = new Set<() => void>();
-	const selected = new Set<TableItem>();
-	const allSelected = writable(false);
+	const selected = new Map<TableItem, number>();
 	const resetFlag = writable(false);
 	const visibleRowIndex = $state({
 		start: 0,
@@ -200,11 +199,10 @@
 	let viewportElement = $state<HTMLElement>();
 	let headerHeight = $state(0);
 	let tableBodyElement = $state<HTMLTableSectionElement>();
-	let filterable = $state(false);
 	let allFiltersDefault = writable(true);
-	let isAllSelectorChecked = $state(false);
-	let rowCount = $derived(internalItems.length);
 	let selectedCount = $state(0);
+	let isAllSelected = $state(false);
+	let rowCount = $derived(internalItems.length);
 	let search = $state<{ value: string; settings: TableSearchSettings } | undefined>();
 	let sorting = writable<InternalSortDetail | undefined>(undefined);
 	let errorMessage = $state('');
@@ -257,8 +255,10 @@
 		element: {
 			table: { subscribe: tableElement.subscribe }
 		},
+		selectedCount: () => selectedCount,
+		rowCount: () => rowCount,
+		isAllSelected: () => isAllSelected,
 		selectable,
-		allSelected: { subscribe: allSelected.subscribe },
 		sorting: {
 			subscribe: sorting.subscribe
 		},
@@ -282,7 +282,7 @@
 		items;
 		if (isMounted) {
 			untrack(() => {
-				resetRefreshButtons();
+				resetRefreshButtonTimers();
 				applyFilteringAndOrdering();
 			});
 		}
@@ -327,12 +327,10 @@
 
 	function onFilterMount(filterHeader: TableFilterHeader) {
 		filterIsDefault.set(filterHeader, true);
-		filterable = filterIsDefault.size > 0;
 	}
 
 	function onFilterDestroy(filterHeader: TableFilterHeader) {
 		filterIsDefault.delete(filterHeader);
-		filterable = filterIsDefault.size > 0;
 		$allFiltersDefault = [...filterIsDefault.values()].every(Boolean);
 		applyFilteringAndOrdering();
 	}
@@ -472,14 +470,14 @@
 		internalItems = internalItems;
 	}
 
-	function resetRefreshButtons() {
+	function resetRefreshButtonTimers() {
 		refreshReset.forEach((reset) => reset());
 	}
 
 	async function refresh(handler?: RefreshHandler) {
 		$internalState = 'loading';
 		await handler?.(refreshDetail);
-		resetRefreshButtons();
+		resetRefreshButtonTimers();
 		selected.clear();
 		updateSelect();
 		tableBodyElement?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -491,41 +489,46 @@
 		applyFilteringAndOrdering();
 	}
 
-	function updateSelect(skipDispatch = false) {
+	let flag = $state(false);
+
+	function updateSelect(stopPropagation = false, skipSettingIsAllSelected = false) {
 		selectedCount = selected.size;
-		isAllSelectorChecked = rowCount > 0 && selectedCount >= rowCount;
-		if (!skipDispatch && onSelect) {
+		if (!skipSettingIsAllSelected) {
+			isAllSelected = rowCount > 0 && selectedCount >= rowCount;
+		}
+
+		if (!stopPropagation && onSelect) {
 			const items: SelectDetail = [];
-			selected.forEach((item) => items.push($state.snapshot(item)));
+			selected.forEach((index, item) => items.push({ item: $state.snapshot(item), index }));
 			onSelect([...items]);
 		}
+
+		flag = !flag;
 	}
 
-	function onSelectorChange(isSelected: boolean, item: TableItem) {
-		selected[isSelected ? 'add' : 'delete'](item);
+	function onSelectorChange(isSelected: boolean, item: TableItem, index: number) {
+		if (isSelected) {
+			selected.set(item, index);
+		} else {
+			selected.delete(item);
+		}
 		updateSelect();
 	}
 
-	async function onAllSelectorChange(isAllSelected: boolean) {
-		if ($allSelected === isAllSelected) {
-			// Setting $allSelected to the same value as it was before will not trigger a change,
-			// so we need to change it to a different value first.
-			$allSelected = !isAllSelected;
-			await tick();
-		}
-
-		$allSelected = isAllSelectorChecked = isAllSelected;
-		const action = selected[isAllSelected ? 'add' : 'delete'].bind(selected);
-
+	async function onAllSelectorChange() {
 		internalItems.forEach(({ index, data }) => {
 			if (rowDisabler?.($state.snapshot(data), index)) {
 				selected.delete(data);
 			} else {
-				action(data);
+				if (isAllSelected) {
+					selected.set(data, index);
+				} else {
+					selected.delete(data);
+				}
 			}
 		});
 
-		updateSelect();
+		updateSelect(undefined, true);
 	}
 
 	async function onScroll() {
@@ -580,13 +583,14 @@
 	// Exported helper functions //
 	///////////////////////////////
 
-	export function applyFilteringAndOrdering() {
+	export async function applyFilteringAndOrdering() {
 		// Filtering
 		filterItems();
 
 		// Sorting
 		sortItems();
 		onScroll();
+		// await tick();
 		updateSelect(true);
 	}
 
@@ -595,13 +599,7 @@
 	 * @returns An array of the selected items and their indicies.
 	 */
 	export function getSelectedItems(): { item: TableItem; index: number }[] {
-		return items.reduce<ReturnType<typeof getSelectedItems>>((acc, data, index) => {
-			if (selected.has(data)) {
-				const item = $state.snapshot(data);
-				acc.push({ item, index });
-			}
-			return acc;
-		}, []);
+		return [...selected.entries()].map(([item, index]) => ({ item: $state.snapshot(item), index }));
 	}
 
 	/**
@@ -650,7 +648,7 @@
 	 */
 	export function clearSelection(): void {
 		selected.clear();
-		$allSelected = isAllSelectorChecked = false;
+		isAllSelected = false;
 		updateSelect();
 	}
 
@@ -718,16 +716,11 @@
 	</div>
 {/if}
 <div class={twMerge('flex flex-col overflow-hidden rounded-md border text-sm', c)} {style}>
-	{@render actions?.()}
+	{@render actions?.({ selectedCount })}
 	<div bind:this={viewportElement} onscroll={onScroll} class="relative h-full overflow-auto">
 		<table bind:this={$tableElement} class="w-full table-fixed border-spacing-2 text-slate-700">
 			<thead bind:clientHeight={headerHeight} class="sticky left-0 top-0 z-10 w-full bg-white">
-				<InfiniteTableRow
-					index={0}
-					header
-					selected={isAllSelectorChecked}
-					onChange={onAllSelectorChange}
-				>
+				<InfiniteTableRow header bind:selected={isAllSelected} onChange={onAllSelectorChange}>
 					{@render headers?.()}
 				</InfiniteTableRow>
 			</thead>
@@ -739,19 +732,21 @@
 			>
 				{#each internalItems as { data, index }, position}
 					{#if position >= visibleRowIndex.start && position < visibleRowIndex.end}
-						<InfiniteTableRow
-							onChange={(isSelected) => onSelectorChange(isSelected, data)}
-							selected={selected.has(data)}
-							disabled={rowDisabler?.(data, index) ?? false}
-							disabledMessage={disabledRowMessage}
-						>
-							{@render children?.({
-								item: data,
-								index,
-								selectedCount,
-								isAllSelected: isAllSelectorChecked
-							})}
-						</InfiniteTableRow>
+						{#key flag}
+							<InfiniteTableRow
+								onChange={(isSelected) => onSelectorChange(isSelected, data, index)}
+								selected={selected.has(data)}
+								disabled={rowDisabler?.(data, index) ?? false}
+								disabledMessage={disabledRowMessage}
+							>
+								{@render children?.({
+									item: data,
+									index,
+									selectedCount,
+									isAllSelected
+								})}
+							</InfiniteTableRow>
+						{/key}
 					{/if}
 					{#if position === internalItems.length - 1}
 						<tr>

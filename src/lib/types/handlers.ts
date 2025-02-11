@@ -72,5 +72,5 @@ export type InternalSortDetail = SortDetail & {
  */
 export type SortHandler = (result: RefreshDetail, detail: SortDetail) => Promise<void> | void;
 
-export type SelectDetail = TableItem[];
+export type SelectDetail = { item: TableItem; index: number }[];
 export type SelectHandler = (detail: SelectDetail) => void;

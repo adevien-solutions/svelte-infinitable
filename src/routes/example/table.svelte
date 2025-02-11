@@ -113,7 +113,7 @@
 	};
 
 	const onSelect: SelectHandler = (items) => {
-		selectedTasks = [...items] as TaskData[];
+		selectedTasks = items.map(({ item }) => item) as TaskData[];
 		// Array.every returns true if the array is empty
 		cancelDisabled = selectedTasks.every(({ state }) => isFinishedTaskState(state));
 	};

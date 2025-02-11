@@ -8,6 +8,7 @@
 	type Props = {
 		header?: boolean;
 		selected?: boolean;
+		indeterminate?: boolean;
 		disabled?: boolean;
 		disabledMessage?: string;
 		class?: string;
@@ -18,21 +19,17 @@
 
 	let {
 		header = false,
-		selected = false,
+		selected = $bindable(false),
 		disabled = false,
 		disabledMessage = 'This row cannot be selected',
 		class: c = '',
-		onChange = () => {},
+		onChange,
 		children,
 		...rest
 	}: Props = $props();
 	const initial = selected;
-	const { selectable, allSelected } = getInfiniteTableContext();
-
-	$effect(() => {
-		if (disabled) return;
-		selected = $allSelected;
-	});
+	const { selectable, isAllSelected, selectedCount } = getInfiniteTableContext();
+	let indeterminate = $derived(header ? !isAllSelected() && selectedCount() > 0 : false);
 
 	onMount(() => {
 		selected = initial;
@@ -43,7 +40,7 @@
 			return;
 		}
 		await tick();
-		onChange(selected);
+		onChange?.(selected);
 	}
 </script>
 
@@ -83,6 +80,7 @@
 					bind:checked={selected}
 					onclick={onClick}
 					{disabled}
+					{indeterminate}
 					class={header ? 'mt-1' : 'mt-0.5'}
 				/>
 			{/if}
