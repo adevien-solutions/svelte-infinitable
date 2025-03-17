@@ -333,7 +333,6 @@
 
 	function onHeaderMount(style: TableHeaderStyle) {
 		headerStyle.add(style);
-		console.log(style);
 		setTableMinWidth();
 	}
 
@@ -353,7 +352,6 @@
 				widths.push(typeof width === 'number' ? `${width}px` : width);
 			}
 		});
-		console.log(widths);
 
 		const varName = '--calculated-min-width';
 		if (widths.length === 0) {
