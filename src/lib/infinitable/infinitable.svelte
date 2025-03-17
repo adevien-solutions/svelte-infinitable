@@ -23,6 +23,7 @@
 		SortHandler,
 		TableFilterHeader,
 		TableHeader,
+		TableHeaderStyle,
 		TableItem,
 		TableSearchSettings
 	} from '../types/index.js';
@@ -181,6 +182,7 @@
 		error
 	}: Props = $props();
 
+	const headerStyle = new Set<TableHeaderStyle>();
 	const filterIsDefault = new Map<TableFilterHeader, boolean>();
 	const refreshReset = new Set<() => void>();
 	const selected = new Map<TableItem, number>();
@@ -209,6 +211,7 @@
 	let internalState = writable<InfiniteTableState>('idle');
 	let isInitialLoad = $state(ignoreInfinite);
 	let isMounted = $state(false);
+	let flag = $state(false);
 
 	////////////////////////////////////////
 	// Functions passed to event handlers //
@@ -262,6 +265,8 @@
 		sorting: {
 			subscribe: sorting.subscribe
 		},
+		onHeaderMount,
+		onHeaderDestroy,
 		onFilterMount,
 		onFilterDestroy,
 		onFilterChange,
@@ -298,6 +303,7 @@
 
 	onMount(() => {
 		isMounted = true;
+		setTableMinWidth();
 	});
 
 	function resetInternalItems() {
@@ -323,6 +329,38 @@
 
 	function onSearchDestroy() {
 		search = undefined;
+	}
+
+	function onHeaderMount(style: TableHeaderStyle) {
+		headerStyle.add(style);
+		console.log(style);
+		setTableMinWidth();
+	}
+
+	function onHeaderDestroy(style: TableHeaderStyle) {
+		headerStyle.delete(style);
+		setTableMinWidth();
+	}
+
+	function setTableMinWidth() {
+		if (!$tableElement) return;
+
+		const widths: string[] = [];
+		headerStyle.forEach(({ width, minWidth }) => {
+			if (minWidth !== undefined) {
+				widths.push(`${minWidth}px`);
+			} else if (width !== undefined) {
+				widths.push(typeof width === 'number' ? `${width}px` : width);
+			}
+		});
+		console.log(widths);
+
+		const varName = '--calculated-min-width';
+		if (widths.length === 0) {
+			$tableElement.style.removeProperty(varName);
+		} else {
+			$tableElement.style.setProperty(varName, `calc(${widths.join(' + ')})`);
+		}
 	}
 
 	function onFilterMount(filterHeader: TableFilterHeader) {
@@ -488,8 +526,6 @@
 		await tick();
 		applyFilteringAndOrdering();
 	}
-
-	let flag = $state(false);
 
 	function updateSelect(stopPropagation = false, skipSettingIsAllSelected = false) {
 		selectedCount = selected.size;
@@ -718,7 +754,10 @@
 <div class={twMerge('flex flex-col overflow-hidden rounded-md border text-sm', c)} {style}>
 	{@render actions?.({ selectedCount })}
 	<div bind:this={viewportElement} onscroll={onScroll} class="relative h-full overflow-auto">
-		<table bind:this={$tableElement} class="w-full table-fixed border-spacing-2 text-slate-700">
+		<table
+			bind:this={$tableElement}
+			class="w-full min-w-[--calculated-min-width] table-fixed border-spacing-2 text-slate-700"
+		>
 			<thead bind:clientHeight={headerHeight} class="sticky left-0 top-0 z-10 w-full bg-white">
 				<InfiniteTableRow header bind:selected={isAllSelected} onChange={onAllSelectorChange}>
 					{@render headers?.()}
@@ -837,6 +876,8 @@
 		{/if}
 	</div>
 </div>
+
+<!-- The details below the table -->
 {#if rowsDetail}
 	{@render rowsDetail?.({ rowCount, selectedCount })}
 {:else}
@@ -844,6 +885,8 @@
 		{rowCount} row{rowCount === 1 ? '' : 's'} shown{#if selectable}, {selectedCount} selected{/if}
 	</p>
 {/if}
+
+<!-- The error message below the table -->
 {#if errorMessage}
 	{#if error}
 		{@render error?.({ message: errorMessage })}

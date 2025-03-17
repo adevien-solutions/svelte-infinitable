@@ -6,6 +6,7 @@ import type {
 	RefreshHandler,
 	SearchHandler,
 	TableFilterHeader,
+	TableHeaderStyle,
 	TableSearchSettings
 } from '../types/index.js';
 
@@ -27,6 +28,8 @@ export type InfiniteTableContext = {
 	rowCount: () => number;
 	isAllSelected: () => boolean;
 	sorting: Readable<InternalSortDetail | undefined>;
+	onHeaderMount: (style: TableHeaderStyle) => void;
+	onHeaderDestroy: (style: TableHeaderStyle) => void;
 	onFilterMount: (filterHeader: TableFilterHeader) => void;
 	onFilterChange: (detail: FilterDetailItem, isUserReset: boolean) => void;
 	onFilterDestroy: (filterHeader: TableFilterHeader) => void;

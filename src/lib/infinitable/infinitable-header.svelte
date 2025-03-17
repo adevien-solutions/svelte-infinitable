@@ -17,14 +17,21 @@
 
 	type Props = {
 		header: TableHeader;
+		/**
+		 * Debounce time in milliseconds for the resize event. Less than `50` is not recommended.
+		 * @default 100
+		 */
+		resizeDebounce?: number;
 		class?: string;
 		children?: Snippet;
 		[key: string]: any;
 	};
 
-	let { header, class: c = '', children, ...rest }: Props = $props();
+	let { header, resizeDebounce = 100, class: c = '', children, ...rest }: Props = $props();
 	const {
 		sorting,
+		onHeaderMount,
+		onHeaderDestroy,
 		onFilterMount,
 		onFilterDestroy,
 		onFilterChange,
@@ -33,6 +40,7 @@
 		element: { table }
 	} = getInfiniteTableContext();
 	const id = uniqueId(header.label);
+	const { style } = header;
 	const filter = $state(
 		isFilterHeader(header)
 			? {
@@ -71,12 +79,18 @@
 	});
 
 	onMount(() => {
+		if (style) {
+			onHeaderMount(style);
+		}
 		if (isFilterHeader(header)) {
 			onFilterMount(header);
 		}
 	});
 
 	onDestroy(() => {
+		if (style) {
+			onHeaderDestroy(style);
+		}
 		if (isFilterHeader(header)) {
 			onFilterDestroy(header);
 		}
@@ -162,7 +176,7 @@
 
 	const onResize = debounce(() => {
 		setWidth();
-	}, 50);
+	}, resizeDebounce);
 
 	function setWidth(): void {
 		const { style } = header;
